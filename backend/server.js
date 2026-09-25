@@ -3,7 +3,7 @@ require("dotenv").config({ quiet: true });
 const express = require("express");
 const { GoogleGenAI } = require("@google/genai");
 const { cacheKey, getCached, setCached, cacheMode } = require("./cache");
-const { Conversation, SearchLog, User, connectDB } = require("./db");
+const { Conversation, SearchLog, User, connectDB, isDBReady } = require("./db");
 const {
   authRouter,
   optionalAuth,
@@ -123,6 +123,11 @@ app.use(express.json({ limit: "20kb" }));
 
 app.use("/api/auth", authRouter);
 app.use("/api/chats", chatsRouter);
+
+// Used by Render's health check and for a quick "is it up?" test.
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, database: isDBReady() ? "connected" : "disconnected" });
+});
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY

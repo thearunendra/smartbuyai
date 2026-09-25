@@ -23,5 +23,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.2",
     "openai": "^7.23.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
