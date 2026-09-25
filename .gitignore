@@ -1,0 +1,25 @@
+# Dependencies and builds
+node_modules/
+dist/
+dist-ssr/
+
+# Secrets: never commit real keys (see backend/.env.example)
+.env
+.env.local
+.env.*.local
+
+# Old local data files from before MongoDB
+backend/search-history.json
+backend/searchHistory.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Editors and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

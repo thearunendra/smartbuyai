@@ -1,0 +1,106 @@
+.category-tabs {
+  position: relative;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.tabs-scroller {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-radius: 999px;
+}
+
+.tabs-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fade the edge that has more tabs behind it. */
+.category-tabs.fade-left .tabs-scroller {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 64px);
+  mask-image: linear-gradient(90deg, transparent 0, #000 64px);
+}
+
+.category-tabs.fade-right .tabs-scroller {
+  -webkit-mask-image: linear-gradient(270deg, transparent 0, #000 64px);
+  mask-image: linear-gradient(270deg, transparent 0, #000 64px);
+}
+
+.category-tabs.fade-left.fade-right .tabs-scroller {
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 64px,
+    #000 calc(100% - 64px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 64px,
+    #000 calc(100% - 64px),
+    transparent 100%
+  );
+}
+
+.category-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.category-tab:hover {
+  color: var(--text);
+  background: var(--bg-subtle);
+}
+
+.category-tab.active {
+  background: var(--primary);
+  color: var(--primary-text);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.tabs-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  transform: translateY(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  transition: border-color 0.15s ease;
+}
+
+.tabs-arrow:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.tabs-arrow-left {
+  left: 6px;
+}
+
+.tabs-arrow-right {
+  right: 6px;
+}
