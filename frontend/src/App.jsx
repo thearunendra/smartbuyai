@@ -7,6 +7,7 @@ import Profile from "./pages/Profile";
 import AdminLogin from "./pages/AdminLogin";
 import Admin from "./pages/Admin";
 import Chatbot from "./pages/Chatbot";
+import ProductDetails from "./pages/ProductDetails";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/chatbot" element={<Chatbot />} />
           <Route path="/chatbot/:chatId" element={<Chatbot />} />
+          <Route path="/product" element={<ProductDetails />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

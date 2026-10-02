@@ -64,9 +64,23 @@ const searchLogSchema = new Schema(
 
 searchLogSchema.index({ createdAt: -1 });
 
+// One saved product per user and product name.
+const wishlistItemSchema = new Schema(
+  {
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    name: { type: String, required: true, maxlength: 300 },
+    // The product card (price, store, image, offers) when it was saved.
+    product: { type: Schema.Types.Mixed, required: true }
+  },
+  { timestamps: true }
+);
+
+wishlistItemSchema.index({ user: 1, name: 1 }, { unique: true });
+
 const User = mongoose.model("User", userSchema);
 const Conversation = mongoose.model("Conversation", conversationSchema);
 const SearchLog = mongoose.model("SearchLog", searchLogSchema);
+const WishlistItem = mongoose.model("WishlistItem", wishlistItemSchema);
 
 
 // =====================================================
@@ -120,6 +134,7 @@ module.exports = {
   User,
   Conversation,
   SearchLog,
+  WishlistItem,
   connectDB,
   isDBReady
 };

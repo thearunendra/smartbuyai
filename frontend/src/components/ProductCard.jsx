@@ -1,5 +1,7 @@
-import { ShoppingBag, Sparkles, Star } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowRight, ShoppingBag, Sparkles, Star } from "lucide-react";
 import StoreOffers from "./StoreOffers";
+import { productPath } from "../utils/product";
 import "./ProductCard.css";
 
 // layout: "grid" (Products page) or "row" (chat results).
@@ -47,6 +49,14 @@ function ProductCard({ product, layout = "grid" }) {
         )}
 
         <StoreOffers offers={product.offers} />
+
+        <Link
+          to={productPath(product)}
+          state={{ product }}
+          className="btn btn-secondary product-details-link"
+        >
+          View details <ArrowRight size={16} />
+        </Link>
       </div>
     </article>
   );

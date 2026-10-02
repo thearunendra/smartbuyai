@@ -132,6 +132,12 @@
   margin-top: 2px;
 }
 
+.product-details-link {
+  height: 40px;
+  margin-top: auto;
+  font-size: 13px;
+}
+
 /* Compact text for cards inside the chat. */
 
 .product-card-row .product-body {
@@ -171,6 +177,11 @@
 
 .product-card-row .offer-go {
   font-size: 11px;
+}
+
+.product-card-row .product-details-link {
+  height: 36px;
+  font-size: 12.5px;
 }
 
 @media (max-width: 560px) {

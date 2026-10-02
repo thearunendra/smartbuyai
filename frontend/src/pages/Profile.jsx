@@ -3,22 +3,27 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   CalendarDays,
+  Heart,
   History,
   LayoutGrid,
   LogOut,
   Mail,
-  MessageSquare
+  MessageSquare,
+  ShoppingBag,
+  Trash2
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { formatChatDate } from "../utils/dates";
+import { formatPrice, productPath } from "../utils/product";
 import "./Profile.css";
 
 function Profile() {
   const navigate = useNavigate();
   const { user, checking, signOut } = useAuth();
   const [chats, setChats] = useState(null);
+  const [wishlist, setWishlist] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -33,10 +38,30 @@ function Profile() {
         if (!ignore) setChats([]);
       });
 
+    api("/api/wishlist")
+      .then((data) => {
+        if (!ignore) setWishlist(data.items);
+      })
+      .catch(() => {
+        if (!ignore) setWishlist([]);
+      });
+
     return () => {
       ignore = true;
     };
   }, [user]);
+
+  const removeFromWishlist = async (name) => {
+    try {
+      await api(`/api/wishlist?name=${encodeURIComponent(name)}`, {
+        method: "DELETE"
+      });
+    } catch (error) {
+      console.error(error);
+    }
+
+    setWishlist((prev) => prev?.filter((item) => item.name !== name) ?? prev);
+  };
 
   if (checking) {
     return <Navbar />;
@@ -140,6 +165,57 @@ function Profile() {
                     <span>{chat.title}</span>
                     <time>{formatChatDate(chat.updatedAt)}</time>
                   </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="profile-panel">
+          <div className="profile-panel-header">
+            <h2>Wishlist</h2>
+          </div>
+
+          {wishlist === null ? (
+            <div className="skeleton" style={{ height: 120 }} />
+          ) : wishlist.length === 0 ? (
+            <p className="profile-empty">
+              No saved products yet. Open a product and tap{" "}
+              <Heart size={13} /> Add to Wishlist.
+            </p>
+          ) : (
+            <ul className="wishlist">
+              {wishlist.map(({ id, name, product }) => (
+                <li key={id}>
+                  <Link to={productPath(product)} state={{ product }}>
+                    <span className="wishlist-media">
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt=""
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <ShoppingBag size={20} />
+                      )}
+                    </span>
+                    <span className="wishlist-name">{name}</span>
+                    <span className="wishlist-price">
+                      {formatPrice(product.price)}
+                      <small>at {product.store}</small>
+                    </span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => removeFromWishlist(name)}
+                    aria-label={`Remove ${name} from wishlist`}
+                    title="Remove"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </li>
               ))}
             </ul>
