@@ -15,6 +15,8 @@ import {
   Users
 } from "lucide-react";
 import Navbar from "../components/Navbar";
+// TEMPORARY (2026-10-03): test results for the project demo, see TestingPanel.
+import TestingPanel from "../components/TestingPanel";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import "./Admin.css";
@@ -348,6 +350,8 @@ function Admin() {
             </p>
           )}
         </section>
+
+        <TestingPanel />
       </main>
     </>
   );

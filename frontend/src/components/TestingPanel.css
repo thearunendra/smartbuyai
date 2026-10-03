@@ -1,0 +1,98 @@
+/* TEMPORARY (2026-10-03): styles for the admin testing panel. Delete with
+   TestingPanel.jsx. Bars, tags and muted cells reuse the admin classes. */
+.testing-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.testing-intro {
+  margin: 0;
+  max-width: 70ch;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.testing-suite {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-subtle);
+}
+
+.testing-suite-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.testing-suite-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.testing-counts {
+  color: var(--text-muted);
+  font-style: normal;
+  opacity: 0.75;
+}
+
+.testing-threshold {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.testing-bugs h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.testing-bugs ol {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.testing-bugs strong {
+  font-size: 14px;
+}
+
+.testing-bugs p {
+  margin: 3px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.testing-howto {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.testing-howto code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--bg-subtle);
+  font-size: 12.5px;
+}
+
+@media (max-width: 600px) {
+  .testing-suite {
+    padding: 12px;
+  }
+}
