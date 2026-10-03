@@ -20,6 +20,9 @@ services:
         sync: false
       - key: SERPER_API_KEY
         sync: false
+      # Spare key, used automatically when the one above runs out of credits.
+      - key: SERPER_API_KEY_2
+        sync: false
       - key: MONGODB_URI
         sync: false
       - key: UPSTASH_REDIS_REST_URL

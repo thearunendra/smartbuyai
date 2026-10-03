@@ -3,8 +3,8 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import {
   Activity,
   BarChart3,
-  CreditCard,
   Flame,
+  Heart,
   LogOut,
   MessageSquare,
   RefreshCw,
@@ -128,8 +128,8 @@ function Admin() {
     { icon: BarChart3, label: "Searches (7 days)", value: stats?.searchesLast7Days ?? 0 },
     { icon: Users, label: "Users", value: stats?.users ?? 0 },
     { icon: MessageSquare, label: "Saved chats", value: stats?.chats ?? 0 },
-    { icon: Flame, label: "Most searched", value: stats?.mostSearched?.category || "—" },
-    { icon: CreditCard, label: "Serper credits left", value: stats?.serperCredits ?? "N/A" }
+    { icon: Heart, label: "Wishlisted items", value: stats?.wishlistItems ?? 0 },
+    { icon: Flame, label: "Most searched", value: stats?.mostSearched?.category || "—" }
   ];
 
   return (

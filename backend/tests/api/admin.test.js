@@ -3,7 +3,7 @@
 const request = require("supertest");
 const mongoose = require("mongoose");
 const { app } = require("../../app");
-const { User, Conversation, SearchLog } = require("../../db");
+const { User, Conversation, SearchLog, WishlistItem } = require("../../db");
 const { startDB, clearDB, stopDB, tokenFor, mockSerper } = require("../helpers");
 
 let admin;
@@ -58,6 +58,10 @@ describe("statistics", () => {
     });
 
     await Conversation.create({ user: member._id, title: "Chat" });
+    await WishlistItem.create([
+      { user: member._id, name: "P1", product: { name: "P1", price: 100 } },
+      { user: member._id, name: "P2", product: { name: "P2", price: 200 } }
+    ]);
     await SearchLog.create([
       { query: "phone a", category: "Smartphones", results: 2, products: ["P1", "P2"] },
       { query: "phone b", category: "Smartphones", results: 1, products: ["P1"] },
@@ -77,6 +81,7 @@ describe("statistics", () => {
     expect(body.searchesPerDay.at(-1).count).toBe(4);
     expect(body.users).toBe(2);
     expect(body.chats).toBe(1);
+    expect(body.wishlistItems).toBe(2);
     expect(body.categories).toEqual([
       { category: "Smartphones", count: 3 },
       { category: "Laptops", count: 2 }

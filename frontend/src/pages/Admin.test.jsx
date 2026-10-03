@@ -112,8 +112,8 @@ describe('Admin dashboard', () => {
     searchesLast7Days: 30,
     users: 12,
     chats: 40,
+    wishlistItems: 17,
     mostSearched: { category: 'Smartphones', count: 50 },
-    serperCredits: 2400,
     searchesPerDay: [
       { date: '2026-09-27', count: 2 },
       { date: '2026-10-03', count: 9 }
@@ -162,7 +162,8 @@ describe('Admin dashboard', () => {
     renderAt('/admin')
 
     expect(await screen.findByText('120')).toBeInTheDocument()
-    expect(screen.getByText('2400')).toBeInTheDocument()
+    expect(screen.getByText('Wishlisted items')).toBeInTheDocument()
+    expect(screen.getByText('17')).toBeInTheDocument()
     expect(screen.getAllByText('Smartphones').length).toBeGreaterThan(0)
     expect(screen.getByText('iPhone 15')).toBeInTheDocument()
     expect(screen.getByText('flying car')).toBeInTheDocument()
@@ -178,7 +179,6 @@ describe('Admin dashboard', () => {
     expect(await screen.findByText('No searches yet.')).toBeInTheDocument()
     expect(screen.getByText('No product data yet.')).toBeInTheDocument()
     expect(screen.getByText('No recent searches.')).toBeInTheDocument()
-    expect(screen.getByText('N/A')).toBeInTheDocument()
     expect(screen.getByText('—')).toBeInTheDocument()
   })
 

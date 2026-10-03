@@ -123,3 +123,76 @@ describe("searchShopping", () => {
     await expect(searchShopping(unique("nothing"))).resolves.toEqual([]);
   });
 });
+
+describe("serperRequest with a spare key", () => {
+  // A fresh module, so the key in use starts from the first one again.
+  function withSpareKey() {
+    const saved = process.env.SERPER_API_KEY_2;
+    let request;
+
+    process.env.SERPER_API_KEY_2 = "spare-serper-key";
+    jest.isolateModules(() => {
+      request = require("../../app").internals.serperRequest;
+    });
+
+    if (saved === undefined) {
+      delete process.env.SERPER_API_KEY_2;
+    } else {
+      process.env.SERPER_API_KEY_2 = saved;
+    }
+
+    return request;
+  }
+
+  function keyOf(fetchMock, call) {
+    return fetchMock.mock.calls[call][1].headers["X-API-KEY"];
+  }
+
+  test("switches to the spare when the first is out of credits", async () => {
+    const request = withSpareKey();
+    let calls = 0;
+    const fetchMock = mockSerper(() => {
+      calls += 1;
+      return calls === 1 ? { ok: false, status: 403 } : { organic: [1] };
+    });
+
+    await expect(request("search", { q: "x" })).resolves.toEqual({ organic: [1] });
+    expect(keyOf(fetchMock, 0)).toBe("test-serper-key");
+    expect(keyOf(fetchMock, 1)).toBe("spare-serper-key");
+  });
+
+  test("402 counts as out of credits too, and the spare is kept for later requests", async () => {
+    const request = withSpareKey();
+    let calls = 0;
+    const fetchMock = mockSerper(() => {
+      calls += 1;
+      return calls === 1 ? { ok: false, status: 402 } : { organic: [calls] };
+    });
+
+    await request("search", { q: "a" });
+    await request("search", { q: "b" });
+
+    expect(keyOf(fetchMock, 1)).toBe("spare-serper-key");
+    expect(keyOf(fetchMock, 2)).toBe("spare-serper-key");
+  });
+
+  test("fails once both keys are out of credits", async () => {
+    const request = withSpareKey();
+    const fetchMock = mockSerper(() => ({ ok: false, status: 403 }));
+
+    await expect(request("search", { q: "x" })).rejects.toThrow(
+      "Serper request failed with status 403"
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("another error status does not burn the spare", async () => {
+    const request = withSpareKey();
+    const fetchMock = mockSerper(() => ({ ok: false, status: 500 }));
+
+    await expect(request("search", { q: "x" })).rejects.toThrow(
+      "Serper request failed with status 500"
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});

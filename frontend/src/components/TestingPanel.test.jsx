@@ -1,85 +1,108 @@
-// TestingPanel: the temporary white-box test summary on the admin dashboard.
-// Delete with TestingPanel.jsx.
+// TestingPanel: the temporary coverage split on the admin dashboard, and the
+// button that reads the last test run. Delete with TestingPanel.jsx.
 
-import { render, screen } from '@testing-library/react'
-import { expect, test } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, expect, test, vi } from 'vitest'
 import TestingPanel from './TestingPanel'
-import {
-  BUGS_FOUND,
-  COVERAGE_THRESHOLDS,
-  TESTING_SNAPSHOT_DATE,
-  TEST_SUITES
-} from '../data/testing'
+import { api } from '../api'
 
-test('the header totals every suite', () => {
+vi.mock('../api', () => ({ api: vi.fn() }))
+
+// One suite above the threshold and one below, so both marks are covered.
+vi.mock('../data/testing', () => ({
+  TESTING_SNAPSHOT_DATE: '1 Jan 2026',
+  SAFE_PERCENT: 90,
+  TEST_SUITES: [
+    { name: 'Backend', statements: 98.6 },
+    { name: 'Frontend', statements: 84.2 }
+  ]
+}))
+
+beforeEach(() => {
+  api.mockReset()
+})
+
+test('starts from the snapshot, one part per suite', () => {
   const { container } = render(<TestingPanel />)
 
-  const total = TEST_SUITES.reduce((sum, suite) => sum + suite.tests, 0)
+  const parts = container.querySelectorAll('.testing-part')
 
-  // The total appears in the header and again in the intro paragraph.
-  expect(container.querySelector('.panel-meta').textContent).toContain(
-    `${total} tests`
-  )
-  expect(container.querySelector('.panel-meta').textContent).toContain(
-    TESTING_SNAPSHOT_DATE
-  )
-  expect(screen.getByText(new RegExp(`${total} tests across`))).toBeInTheDocument()
+  expect(parts).toHaveLength(2)
+  expect(screen.getByText('Backend')).toBeInTheDocument()
+  expect(screen.getByText('98.6%')).toBeInTheDocument()
+  expect(screen.getByText('84.2%')).toBeInTheDocument()
+  expect(screen.getAllByText('1 Jan 2026')).toHaveLength(2)
 })
 
-test('every suite shows its stack and test count', () => {
-  render(<TestingPanel />)
-
-  for (const suite of TEST_SUITES) {
-    expect(
-      screen.getByRole('heading', { name: suite.name, level: 3 })
-    ).toBeInTheDocument()
-    expect(screen.getByText(suite.stack)).toBeInTheDocument()
-    expect(
-      screen.getByText(`${suite.tests} tests in ${suite.files} files`)
-    ).toBeInTheDocument()
-  }
-})
-
-test('each metric bar is filled to its percentage and names its threshold', () => {
+test('a suite at or above the threshold is safe, one below is not', () => {
   const { container } = render(<TestingPanel />)
 
-  const fills = [...container.querySelectorAll('.bar-fill')]
-  const expected = TEST_SUITES.flatMap((suite) =>
-    ['statements', 'branches', 'functions', 'lines'].map(
-      (key) => `${suite.coverage[key].percent}%`
-    )
-  )
+  const [backend, frontend] = container.querySelectorAll('.testing-part')
 
-  expect(fills.map((fill) => fill.style.width)).toEqual(expected)
-
-  const tracks = [...container.querySelectorAll('.bar-track')]
-  expect(tracks[0].title).toContain(`${COVERAGE_THRESHOLDS.statements}% required`)
+  expect(backend.className).toContain('is-safe')
+  expect(backend.title).toBe('At or above the 90% threshold')
+  expect(frontend.className).toContain('is-low')
+  expect(frontend.title).toBe('Below the 90% threshold')
 })
 
-test('covered/total counts are shown for each metric', () => {
-  render(<TestingPanel />)
+test('the button replaces the snapshot with the last run', async () => {
+  api.mockResolvedValue({
+    backend: { available: true, statements: 99.1, ranAt: '2026-10-03T10:00:00.000Z' },
+    frontend: { available: true, statements: 91.4, ranAt: '2026-10-03T10:00:00.000Z' }
+  })
 
-  const { statements } = TEST_SUITES[0].coverage
-  expect(
-    screen.getByText(`${statements.covered}/${statements.total}`)
-  ).toBeInTheDocument()
+  render(<TestingPanel />)
+  fireEvent.click(screen.getByRole('button', { name: /run test cases/i }))
+
+  expect(await screen.findByText('99.1%')).toBeInTheDocument()
+  expect(screen.getByText('91.4%')).toBeInTheDocument()
+  // 84.2 was below the threshold; the real figure is above it.
+  expect(screen.queryByText('84.2%')).not.toBeInTheDocument()
+  expect(document.querySelectorAll('.testing-part.is-safe')).toHaveLength(2)
 })
 
-test('every defect the tests found is listed', () => {
+test('the button is disabled while it reads', async () => {
+  let release
+  api.mockReturnValue(new Promise((resolve) => { release = resolve }))
+
   render(<TestingPanel />)
 
-  expect(
-    screen.getByRole('heading', { name: /defects these tests found/i })
-  ).toBeInTheDocument()
+  const button = screen.getByRole('button', { name: /run test cases/i })
+  fireEvent.click(button)
 
-  for (const bug of BUGS_FOUND) {
-    expect(screen.getByText(bug.title)).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: /reading results/i })).toBeDisabled()
+
+  release({ backend: { available: true, statements: 99 }, frontend: { available: true, statements: 95 } })
+
+  await waitFor(() => expect(button).not.toBeDisabled())
+})
+
+test('says so when the server has no report, keeping the snapshot', async () => {
+  api.mockResolvedValue({
+    backend: { available: false },
+    frontend: { available: false }
+  })
+
+  render(<TestingPanel />)
+  fireEvent.click(screen.getByRole('button', { name: /run test cases/i }))
+
+  expect(await screen.findByText(/No report on the server/i)).toBeInTheDocument()
+  expect(screen.getByText('98.6%')).toBeInTheDocument()
+})
+
+test('shows the error when the request fails', async () => {
+  api.mockRejectedValue(new Error('Admin access required.'))
+
+  render(<TestingPanel />)
+  fireEvent.click(screen.getByRole('button', { name: /run test cases/i }))
+
+  expect(await screen.findByText('Admin access required.')).toBeInTheDocument()
+})
+
+test('the committed snapshot is itself in the safe range', async () => {
+  const actual = await vi.importActual('../data/testing')
+
+  for (const suite of actual.TEST_SUITES) {
+    expect(suite.statements).toBeGreaterThanOrEqual(actual.SAFE_PERCENT)
   }
-})
-
-test('says how to reproduce the run', () => {
-  render(<TestingPanel />)
-
-  expect(screen.getByText('npm run test:coverage')).toBeInTheDocument()
-  expect(screen.getByText('coverage/index.html')).toBeInTheDocument()
 })

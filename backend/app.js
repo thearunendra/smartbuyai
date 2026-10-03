@@ -1,10 +1,12 @@
 // The Express app and the search pipeline. server.js loads .env and starts
 // it; tests load this file directly with their own environment.
 
+const fs = require("node:fs/promises");
+const path = require("node:path");
 const express = require("express");
 const { GoogleGenAI } = require("@google/genai");
 const { cacheKey, getCached, setCached, cacheMode } = require("./cache");
-const { Conversation, SearchLog, User, isDBReady } = require("./db");
+const { Conversation, SearchLog, User, WishlistItem, isDBReady } = require("./db");
 const {
   authRouter,
   optionalAuth,
@@ -21,7 +23,18 @@ const app = express();
 const GEMINI_MODEL =
   process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
-const SERPER_API_KEY = process.env.SERPER_API_KEY;
+// Serper keys, tried in order: the spare takes over for the rest of the
+// process once the one in use runs out of credits.
+const SERPER_API_KEYS = [process.env.SERPER_API_KEY, process.env.SERPER_API_KEY_2]
+  .map((key) => (typeof key === "string" ? key.trim() : ""))
+  .filter(Boolean);
+
+let serperKeyIndex = 0;
+
+// Serper answers 402 or 403 when an account has nothing left to spend.
+function serperOutOfCredits(status) {
+  return status === 402 || status === 403;
+}
 
 const MAX_QUERY_LENGTH = 200;
 
@@ -237,15 +250,15 @@ function parsePrice(priceText) {
 
 // endpoint is "shopping" (2 credits), "search" or "images" (1 credit each).
 async function serperRequest(endpoint, body) {
-  if (!SERPER_API_KEY) {
+  if (SERPER_API_KEYS.length === 0) {
     throw new Error("SERPER_API_KEY is not set.");
   }
 
-  const request = () =>
+  const request = (key) =>
     fetch(`https://google.serper.dev/${endpoint}`, {
       method: "POST",
       headers: {
-        "X-API-KEY": SERPER_API_KEY,
+        "X-API-KEY": key,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -256,22 +269,35 @@ async function serperRequest(endpoint, body) {
       signal: AbortSignal.timeout(8000)
     });
 
-  let response;
+  // The key in use, then the spare if this one is out of credits.
+  for (;;) {
+    let response;
 
-  try {
-    response = await request();
-  } catch (error) {
-    // Retry once on network errors (dropped connection or timeout).
-    response = await request();
-  }
+    try {
+      response = await request(SERPER_API_KEYS[serperKeyIndex]);
+    } catch (error) {
+      // Retry once on network errors (dropped connection or timeout).
+      response = await request(SERPER_API_KEYS[serperKeyIndex]);
+    }
 
-  if (!response.ok) {
-    throw new Error(
-      `Serper request failed with status ${response.status}`
+    if (response.ok) {
+      return response.json();
+    }
+
+    const hasSpare = serperKeyIndex + 1 < SERPER_API_KEYS.length;
+
+    if (!serperOutOfCredits(response.status) || !hasSpare) {
+      throw new Error(
+        `Serper request failed with status ${response.status}`
+      );
+    }
+
+    console.log(
+      `Serper: key ${serperKeyIndex + 1} is out of credits (status ${response.status}), switching to key ${serperKeyIndex + 2}`
     );
-  }
 
-  return response.json();
+    serperKeyIndex += 1;
+  }
 }
 
 // "amazon.in" -> "Amazon", "Mi.com" -> "Mi"
@@ -1601,7 +1627,7 @@ app.get("/api/product/details", optionalAuth, searchLimiter, async (req, res) =>
 // =====================================================
 
 async function getSerperCredits() {
-  if (!SERPER_API_KEY) {
+  if (SERPER_API_KEYS.length === 0) {
     return null;
   }
 
@@ -1609,7 +1635,7 @@ async function getSerperCredits() {
     const response = await fetch(
       "https://google.serper.dev/account",
       {
-        headers: { "X-API-KEY": SERPER_API_KEY }
+        headers: { "X-API-KEY": SERPER_API_KEYS[serperKeyIndex] }
       }
     );
 
@@ -1663,14 +1689,16 @@ async function searchesPerDay(days) {
 // Admins only (role checked in the database on every request).
 app.get("/api/admin/stats", requireDB, optionalAuth, requireAuth, requireAdmin, async (req, res) => {
   // Category and product stats cover the most recent searches.
-  const [logs, totalSearches, users, chats, perDay, credits] = await Promise.all([
-    SearchLog.find().sort({ createdAt: -1 }).limit(1000).lean(),
-    SearchLog.estimatedDocumentCount(),
-    User.estimatedDocumentCount(),
-    Conversation.estimatedDocumentCount(),
-    searchesPerDay(7),
-    getSerperCredits()
-  ]);
+  const [logs, totalSearches, users, chats, wishlistItems, perDay, credits] =
+    await Promise.all([
+      SearchLog.find().sort({ createdAt: -1 }).limit(1000).lean(),
+      SearchLog.estimatedDocumentCount(),
+      User.estimatedDocumentCount(),
+      Conversation.estimatedDocumentCount(),
+      WishlistItem.estimatedDocumentCount(),
+      searchesPerDay(7),
+      getSerperCredits()
+    ]);
 
   const categoryCounts = {};
   const productCounts = {};
@@ -1717,9 +1745,53 @@ app.get("/api/admin/stats", requireDB, optionalAuth, requireAuth, requireAdmin, 
       .slice(0, 10)
       .map(toRow),
     recentSearches: logs.slice(0, 20).map(toRow),
-    serperCredits: credits
+    serperCredits: credits,
+    wishlistItems
   });
 });
+
+// Statement coverage from the last `npm run test:coverage` in each folder.
+// This only reads the json-summary report the test runners write – nothing is
+// run here. `coverage/` is git-ignored, so a deployed server has no report and
+// both sides come back unavailable.
+const COVERAGE_REPORTS = [
+  ["backend", path.join(__dirname, "coverage", "coverage-summary.json")],
+  ["frontend", path.join(__dirname, "..", "frontend", "coverage", "coverage-summary.json")]
+];
+
+async function readCoverageReport(file) {
+  try {
+    const [raw, stat] = await Promise.all([fs.readFile(file, "utf8"), fs.stat(file)]);
+    const percent = JSON.parse(raw)?.total?.statements?.pct;
+
+    if (typeof percent !== "number") {
+      return { available: false };
+    }
+
+    return {
+      available: true,
+      statements: Math.round(percent * 10) / 10,
+      ranAt: stat.mtime.toISOString()
+    };
+  } catch {
+    return { available: false };
+  }
+}
+
+app.get(
+  "/api/admin/coverage",
+  requireDB,
+  optionalAuth,
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    const reports = await Promise.all(
+      COVERAGE_REPORTS.map(async ([key, file]) => [key, await readCoverageReport(file)])
+    );
+
+    res.json(Object.fromEntries(reports));
+  }
+);
 
 
 // =====================================================
@@ -1745,7 +1817,12 @@ app.use((error, req, res, next) => {
 module.exports = {
   app,
   GEMINI_MODEL,
-  liveStatus: SERPER_API_KEY ? "Serper enabled" : "SERPER_API_KEY missing",
+  liveStatus:
+    SERPER_API_KEYS.length > 1
+      ? `Serper enabled (${SERPER_API_KEYS.length} keys)`
+      : SERPER_API_KEYS.length === 1
+        ? "Serper enabled"
+        : "SERPER_API_KEY missing",
   cacheMode,
   // Internals, exported for the white-box tests.
   internals: {

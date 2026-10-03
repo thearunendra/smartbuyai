@@ -18,7 +18,7 @@ module.exports = {
     "security.js",
     "wishlist.js"
   ],
-  coverageReporters: ["text", "text-summary", "html"],
+  coverageReporters: ["text", "text-summary", "html", "json-summary"],
   // White-box targets: the run fails if coverage drops below these.
   coverageThreshold: {
     global: { statements: 90, branches: 85, functions: 90, lines: 90 }

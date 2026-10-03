@@ -1,116 +1,101 @@
-// TEMPORARY (2026-10-03): white-box test results on the admin dashboard, for
-// the project demo. Remove this file, src/data/testing.js and the three lines
-// that render it in src/pages/Admin.jsx to take the feature out.
-import { Bug, FlaskConical, ShieldCheck } from "lucide-react";
-import {
-  BUGS_FOUND,
-  COVERAGE_THRESHOLDS,
-  TESTING_SNAPSHOT_DATE,
-  TEST_SUITES
-} from "../data/testing";
+// TEMPORARY (2026-10-03): test coverage on the admin dashboard. Remove this
+// file, TestingPanel.css, src/data/testing.js and the two lines that render it
+// in src/pages/Admin.jsx to take the feature out.
+import { useState } from "react";
+import { Check, FlaskConical, RefreshCw, X } from "lucide-react";
+import { SAFE_PERCENT, TESTING_SNAPSHOT_DATE, TEST_SUITES } from "../data/testing";
+import { api } from "../api";
 import "./TestingPanel.css";
 
-const METRICS = [
-  ["statements", "Statements"],
-  ["branches", "Branches"],
-  ["functions", "Functions"],
-  ["lines", "Lines"]
-];
+function when(iso) {
+  return new Date(iso).toLocaleString("en-IN", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
 
 function TestingPanel() {
-  const totalTests = TEST_SUITES.reduce((sum, suite) => sum + suite.tests, 0);
-  const totalFiles = TEST_SUITES.reduce((sum, suite) => sum + suite.files, 0);
+  // Until the button is pressed, the figures are the snapshot in data/testing.js.
+  const [reports, setReports] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [note, setNote] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    setNote("");
+
+    try {
+      const data = await api("/api/admin/coverage");
+
+      setReports(data);
+
+      if (!data.backend?.available && !data.frontend?.available) {
+        setNote(
+          "No report on the server. Run npm run test:coverage in backend/ and frontend/, then try again."
+        );
+      }
+    } catch (error) {
+      setNote(error.message || "Unable to read the test results.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const suites = TEST_SUITES.map((suite) => {
+    const report = reports?.[suite.name.toLowerCase()];
+
+    return report?.available
+      ? { ...suite, statements: report.statements, ranAt: report.ranAt }
+      : suite;
+  });
 
   return (
     <section className="panel testing-panel">
       <div className="panel-header">
         <h2>
-          <FlaskConical size={18} /> White-box testing
+          <FlaskConical size={18} /> Test cases
         </h2>
 
-        <span className="panel-meta">
-          {totalTests} tests &middot; snapshot of {TESTING_SNAPSHOT_DATE}
-        </span>
+        <button
+          type="button"
+          className="btn btn-secondary testing-run"
+          onClick={load}
+          disabled={loading}
+        >
+          <RefreshCw size={15} /> {loading ? "Reading results..." : "Run test cases"}
+        </button>
       </div>
 
-      <p className="testing-intro">
-        {totalTests} tests across {totalFiles} files, written against the
-        source: every statement, branch and boundary of the parsing, pricing
-        and API code. They use mocked Serper and Gemini clients and an
-        in-memory MongoDB, so a run needs no API keys, no database and no
-        credits.
-      </p>
+      <div className="testing-split">
+        {suites.map((suite) => {
+          const safe = suite.statements >= SAFE_PERCENT;
 
-      {TEST_SUITES.map((suite) => (
-        <div key={suite.name} className="testing-suite">
-          <div className="testing-suite-head">
-            <h3>{suite.name}</h3>
+          return (
+            <div
+              key={suite.name}
+              className={`testing-part ${safe ? "is-safe" : "is-low"}`}
+              title={`${safe ? "At or above" : "Below"} the ${SAFE_PERCENT}% threshold`}
+            >
+              <p className="testing-part-name">{suite.name}</p>
 
-            <span className="tag">
-              {suite.tests} tests in {suite.files} files
-            </span>
+              <strong>
+                <span className="testing-mark">
+                  {safe ? <Check size={15} /> : <X size={15} />}
+                </span>
+                {suite.statements}%
+              </strong>
 
-            <span className="cell-muted">{suite.stack}</span>
-          </div>
-
-          <div className="bar-list">
-            {METRICS.map(([key, label]) => {
-              const metric = suite.coverage[key];
-              const threshold = COVERAGE_THRESHOLDS[key];
-
-              return (
-                <div key={key} className="bar-row">
-                  <div className="bar-label">
-                    <span>
-                      {label}{" "}
-                      <em className="testing-counts">
-                        {metric.covered}/{metric.total}
-                      </em>
-                    </span>
-
-                    <strong>{metric.percent}%</strong>
-                  </div>
-
-                  <div
-                    className="bar-track"
-                    title={`${label}: ${metric.percent}% covered, ${threshold}% required`}
-                  >
-                    <div
-                      className="bar-fill"
-                      style={{ width: `${metric.percent}%` }}
-                    />
-                  </div>
-
-                  <p className="testing-threshold">
-                    <ShieldCheck size={13} /> the run fails below {threshold}%
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-
-      <div className="testing-bugs">
-        <h3>
-          <Bug size={16} /> Defects these tests found in live code
-        </h3>
-
-        <ol>
-          {BUGS_FOUND.map((bug) => (
-            <li key={bug.title}>
-              <strong>{bug.title}</strong>
-              <p className="cell-muted">{bug.detail}</p>
-            </li>
-          ))}
-        </ol>
+              <span className="testing-part-when">
+                {suite.ranAt ? when(suite.ranAt) : TESTING_SNAPSHOT_DATE}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
-      <p className="testing-howto">
-        Reproduce: <code>npm run test:coverage</code> in <code>backend/</code>
-        {" and "}<code>frontend/</code>. The clickable line-by-line report lands
-        in <code>coverage/index.html</code>.
-      </p>
+      {note && <p className="testing-note">{note}</p>}
     </section>
   );
 }
