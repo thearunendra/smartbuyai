@@ -418,7 +418,7 @@ Rules:
 // ordinary searches keep the existing one-request path.
 async function detectSearchIntents(query) {
   const hasMultipleItems =
-    /\\b(?:and|plus|also|along with|as well as|together with|alongside)\\b|&|,\\s*(?=[a-z])/i.test(query);
+    /\b(?:and|plus|also|along with|as well as|together with|alongside)\b|&|,\s*(?=[a-z])/i.test(query);
 
   if (!hasMultipleItems) {
     return [];
@@ -508,7 +508,8 @@ Rules:
   }
 }
 
-async function pickWithGemini(userQuery, budget, listings, limit = 6) {\n  const safeLimit = Number.isInteger(limit) ? Math.min(6, Math.max(1, limit)) : 6;
+async function pickWithGemini(userQuery, budget, listings, limit = 6) {
+  const safeLimit = Number.isInteger(limit) ? Math.min(6, Math.max(1, limit)) : 6;
   const candidates = listings.map((item, index) => ({
     index,
     name: item.name,
