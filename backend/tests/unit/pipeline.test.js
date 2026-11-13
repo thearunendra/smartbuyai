@@ -353,6 +353,98 @@ describe("runSearch", () => {
     expect(fetchMock.mock.calls.length).toBe(calls);
   });
 
+  test("searches requested product types separately and combines their recommendations", async () => {
+    const droneListings = [shoppingItem("Test 4K Camera Drone", 12000)];
+    const tvListings = [shoppingItem("Test 4K Smart Television", 28000)];
+
+    const fetchMock = mockSerper((endpoint, body) => {
+      if (endpoint === "shopping") {
+        if (/drone/i.test(body.q)) return { shopping: droneListings };
+        if (/tv|television/i.test(body.q)) return { shopping: tvListings };
+      }
+
+      return { organic: [] };
+    });
+
+    const query = unique("show me drone and tv");
+
+    geminiReply({
+      intents: [
+        { category: "Drones", query: "best camera drone" },
+        { category: "Televisions", query: "best 4k smart tv" }
+      ]
+    });
+    geminiReply({
+      reply: "Here are some drone options.",
+      category: "Drones",
+      picks: [{ index: 0, reason: "A useful camera drone." }]
+    });
+    geminiReply({
+      reply: "Here are some television options.",
+      category: "Televisions",
+      picks: [{ index: 0, reason: "A clear 4K screen." }]
+    });
+
+    const result = await runSearch(query);
+
+    expect(result.status).toBe(200);
+    expect(result.payload.categories).toEqual(["Drones", "Televisions"]);
+    expect(result.payload.count).toBe(2);
+    expect(result.payload.results.map((item) => item.name)).toEqual([
+      "Test 4K Camera Drone",
+      "Test 4K Smart Television"
+    ]);
+    expect(result.payload.results.map((item) => item.category)).toEqual([
+      "Drones",
+      "Televisions"
+    ]);
+
+    const shoppingQueries = fetchMock.mock.calls
+      .filter(([url]) => String(url).endsWith("/shopping"))
+      .map(([, options]) => JSON.parse(options.body).q);
+
+    expect(shoppingQueries).toEqual(
+      expect.arrayContaining(["best camera drone", "best 4k smart tv"])
+    );
+  });
+
+  test("keeps available category results when another category search fails", async () => {
+    const tvListings = [shoppingItem("Test Smart Television", 25000)];
+
+    mockSerper((endpoint, body) => {
+      if (endpoint === "shopping" && /drone/i.test(body.q)) {
+        return { status: 503 };
+      }
+
+      if (endpoint === "shopping" && /tv|television/i.test(body.q)) {
+        return { shopping: tvListings };
+      }
+
+      return { organic: [] };
+    });
+
+    const query = unique("show me drone and tv");
+
+    geminiReply({
+      intents: [
+        { category: "Drones", query: "best camera drone partial failure test" },
+        { category: "Televisions", query: "best smart tv partial failure test" }
+      ]
+    });
+    geminiReply({
+      reply: "Here are some television options.",
+      category: "Televisions",
+      picks: [{ index: 0, reason: "A clear screen." }]
+    });
+
+    const result = await runSearch(query);
+
+    expect(result.status).toBe(200);
+    expect(result.payload.count).toBe(1);
+    expect(result.payload.results[0].name).toBe("Test Smart Television");
+    expect(result.payload.reply).toMatch(/couldn't fetch Drones listings/i);
+  });
+
   test("doesn't cache an answer with a failed price comparison", async () => {
     // Products no other test has compared, so no offers are cached.
     const fresh = [shoppingItem("Uncompared Phone", 15000)];
