@@ -427,8 +427,8 @@ describe("runSearch", () => {
 
     geminiReply({
       intents: [
-        { category: "Drones", query: "best camera drone" },
-        { category: "Televisions", query: "best smart tv" }
+        { category: "Drones", query: "best camera drone partial failure test" },
+        { category: "Televisions", query: "best smart tv partial failure test" }
       ]
     });
     geminiReply({
