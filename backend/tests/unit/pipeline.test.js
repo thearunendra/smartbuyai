@@ -413,7 +413,7 @@ describe("runSearch", () => {
 
     mockSerper((endpoint, body) => {
       if (endpoint === "shopping" && /drone/i.test(body.q)) {
-        return new Error("drone search unavailable");
+        return { status: 503 };
       }
 
       if (endpoint === "shopping" && /tv|television/i.test(body.q)) {
