@@ -412,7 +412,103 @@ Rules:
   return candidates.slice(0, limit);
 }
 
-async function pickWithGemini(userQuery, budget, listings) {
+
+// Detect distinct product types in a compound shopping request. We only
+// ask Gemini to parse intents when the wording suggests more than one item;
+// ordinary searches keep the existing one-request path.
+async function detectSearchIntents(query) {
+  const hasMultipleItems =
+    /\\b(?:and|plus|also|along with|as well as|together with|alongside)\\b|&|,\\s*(?=[a-z])/i.test(query);
+
+  if (!hasMultipleItems) {
+    return [];
+  }
+
+  const allowedCategories = CATEGORIES.filter((category) => category !== "Other");
+
+  try {
+    const response = await generate({
+      contents: `
+You are a shopping request parser for an Indian shopping assistant.
+
+Find the distinct product types the user wants to shop for.
+Only return multiple intents when the user clearly asks for two or more
+different product types. Do not split one product request because it has
+multiple features, such as "a phone with a good camera and 5G".
+
+User request:
+${query}
+
+Allowed product categories:
+${allowedCategories.join(", ")}
+
+Rules:
+1. Return one intent for each distinct product type, with its exact category
+   from the allowed categories above.
+2. Write a focused Google Shopping search query for that product type only.
+3. Preserve relevant requirements and budget from the user's request.
+4. Do not include the other requested product types in an intent's query.
+5. Return at most 3 intents. If this is really one product type, return an
+   empty intents array.
+`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            intents: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  category: {
+                    type: "string",
+                    enum: allowedCategories
+                  },
+                  query: { type: "string" }
+                },
+                required: ["category", "query"]
+              }
+            }
+          },
+          required: ["intents"]
+        }
+      }
+    });
+
+    const parsed = JSON.parse(response.text || "{}");
+    const seen = new Set();
+    const intents = [];
+
+    for (const item of Array.isArray(parsed.intents) ? parsed.intents : []) {
+      const category = typeof item.category === "string" ? item.category : "";
+      const searchQuery =
+        typeof item.query === "string" ? item.query.trim().slice(0, MAX_QUERY_LENGTH) : "";
+
+      if (
+        !allowedCategories.includes(category) ||
+        !searchQuery ||
+        seen.has(category)
+      ) {
+        continue;
+      }
+
+      seen.add(category);
+      intents.push({ category, query: searchQuery });
+
+      if (intents.length >= 3) {
+        break;
+      }
+    }
+
+    return intents.length >= 2 ? intents : [];
+  } catch (error) {
+    console.log("Intent Detection Error:", error.message);
+    return [];
+  }
+}
+
+async function pickWithGemini(userQuery, budget, listings, limit = 6) {\n  const safeLimit = Number.isInteger(limit) ? Math.min(6, Math.max(1, limit)) : 6;
   const candidates = listings.map((item, index) => ({
     index,
     name: item.name,
@@ -435,7 +531,7 @@ Live listings from Google Shopping (prices in INR):
 ${JSON.stringify(candidates)}
 
 Rules:
-1. Pick at most 6 listings from the list above, by index. Never invent products.
+1. Pick at most ${safeLimit} listings from the list above, by index. Never invent products.
 2. Pick the actual product the user asked for. Skip accessories, cases,
    covers, spare parts and refurbished items unless the user asked for them.
 3. Respect the budget.
@@ -491,7 +587,7 @@ Rules:
       used.add(pick.index);
       return valid;
     })
-    .slice(0, 6)
+    .slice(0, safeLimit)
     .map((pick) => ({
       ...listings[pick.index],
       reason: pick.reason
@@ -825,6 +921,12 @@ async function runSearch(query) {
   }
 
   const budget = extractBudget(query);
+  const intents = await detectSearchIntents(query);
+
+  if (intents.length >= 2) {
+    return runMultiProductSearch(query, budget, intents, answerKey);
+  }
+
   let listings;
 
   try {
@@ -889,6 +991,125 @@ async function runSearch(query) {
   };
 
   // Don't keep a partial comparison for 6 hours.
+  if (complete) {
+    await setCached(answerKey, payload);
+  }
+
+  return { status: 200, payload };
+}
+
+// Runs separate shopping searches for each detected product type, then
+// combines the picks into the single result list expected by the chat UI.
+async function runMultiProductSearch(query, budget, intents, answerKey) {
+  const perIntentLimit = Math.max(1, Math.floor(6 / intents.length));
+
+  const groups = await Promise.all(
+    intents.map(async (intent) => {
+      try {
+        let listings = await searchShopping(intent.query);
+
+        if (budget) {
+          listings = listings.filter((item) => item.price <= budget);
+        }
+
+        listings = listings.slice(0, 25);
+
+        if (listings.length === 0) {
+          return { intent, results: [], reply: "", failed: false };
+        }
+
+        let answer;
+
+        try {
+          answer = await pickWithGemini(
+            intent.query,
+            budget,
+            listings,
+            perIntentLimit
+          );
+        } catch (error) {
+          console.log("Gemini Error (" + intent.category + "):", error.message);
+        }
+
+        if (!answer || answer.results.length === 0) {
+          return {
+            intent,
+            results: listings.slice(0, perIntentLimit),
+            reply: "Here are some live " + intent.category + " options.",
+            failed: false
+          };
+        }
+
+        return {
+          intent,
+          results: answer.results,
+          reply: answer.reply,
+          failed: false
+        };
+      } catch (error) {
+        console.log("Serper Error (" + intent.category + "):", error.message);
+        return { intent, results: [], reply: "", failed: true };
+      }
+    })
+  );
+
+  const groupsWithResults = groups.filter((group) => group.results.length > 0);
+
+  if (groupsWithResults.length === 0) {
+    const allFailed = groups.every((group) => group.failed);
+
+    return {
+      status: allFailed ? 502 : 200,
+      payload: {
+        message: allFailed
+          ? "Unable to fetch live prices right now. Please try again."
+          : "Search completed successfully.",
+        reply: allFailed
+          ? "I couldn't fetch live listings right now. Please try again."
+          : "I couldn't find live listings for the requested products. Try a different search or budget.",
+        category: "Other",
+        categories: intents.map((intent) => intent.category),
+        count: 0,
+        results: []
+      }
+    };
+  }
+
+  const selected = groupsWithResults.flatMap((group) =>
+    group.results.map((product) => ({
+      ...product,
+      category: group.intent.category
+    }))
+  );
+
+  const { products: results, complete } = await compareProducts(selected);
+  const reply = groups
+    .map((group) => {
+      if (group.failed) {
+        return "I couldn't fetch " + group.intent.category + " listings right now.";
+      }
+
+      if (group.results.length === 0) {
+        return "I couldn't find live listings for " + group.intent.category + ".";
+      }
+
+      return group.reply || ("Here are some suitable " + group.intent.category + " options.");
+    })
+    .join(" ");
+
+  const payload = {
+    message: "Search completed successfully.",
+    reply,
+    // Keep the existing single-category field useful for admin analytics.
+    // A multi-category search is recorded as "Other".
+    category: groupsWithResults.length === 1
+      ? groupsWithResults[0].intent.category
+      : "Other",
+    categories: intents.map((intent) => intent.category),
+    count: results.length,
+    results
+  };
+
   if (complete) {
     await setCached(answerKey, payload);
   }
