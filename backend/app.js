@@ -914,7 +914,8 @@ async function compareProducts(products) {
 
 // Runs one AI search. Returns { status, payload }.
 async function runSearch(query) {
-  const answerKey = cacheKey("answer", query);
+  // Version the answer cache so pre-fix single-category responses are not reused.
+  const answerKey = cacheKey("answer-v2", query);
   const cachedAnswer = await getCached(answerKey);
 
   if (cachedAnswer) {
@@ -925,7 +926,7 @@ async function runSearch(query) {
   const intents = await detectSearchIntents(query);
 
   if (intents.length >= 2) {
-    return runMultiProductSearch(query, budget, intents, answerKey);
+    return runMultiProductSearch(budget, intents, answerKey);
   }
 
   let listings;
@@ -1001,7 +1002,7 @@ async function runSearch(query) {
 
 // Runs separate shopping searches for each detected product type, then
 // combines the picks into the single result list expected by the chat UI.
-async function runMultiProductSearch(query, budget, intents, answerKey) {
+async function runMultiProductSearch(budget, intents, answerKey) {
   const perIntentLimit = Math.max(1, Math.floor(6 / intents.length));
 
   const groups = await Promise.all(
