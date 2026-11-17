@@ -14,6 +14,7 @@ const {
 const {
   pickWithGemini,
   filterListings,
+  trustedStoreFromUrl,
   extractOffersBatch,
   compareProducts,
   runSearch
@@ -110,6 +111,20 @@ describe("filterListings", () => {
   });
 });
 
+describe("trustedStoreFromUrl", () => {
+  test.each([
+    ["https://www.amazon.in/product", "Amazon"],
+    ["https://www.flipkart.com/product", "Flipkart"],
+    ["https://store.croma.com/product", "Croma"],
+    ["https://amazon.in.attacker.example/product", null],
+    ["http://amazon.in/product", null],
+    ["javascript:alert(1)", null],
+    ["not a URL", null]
+  ])("%s -> %s", (url, expected) => {
+    expect(trustedStoreFromUrl(url)).toBe(expected);
+  });
+});
+
 describe("extractOffersBatch", () => {
   const items = [
     {
@@ -166,6 +181,22 @@ describe("extractOffersBatch", () => {
 
   test("doesn't call Gemini when no product has pages", async () => {
     const result = await extractOffersBatch([{ name: "Plain Speaker", pages: [] }]);
+
+    expect(result).toEqual({ 0: [] });
+    expect(generateContent).not.toHaveBeenCalled();
+  });
+
+  test("rejects unknown and lookalike merchant domains", async () => {
+    const result = await extractOffersBatch([
+      {
+        name: "Plain Speaker",
+        pages: [
+          { index: 0, title: "Speaker", url: "https://unknown-store.example/item" },
+          { index: 1, title: "Speaker", url: "https://amazon.in.attacker.example/item" },
+          { index: 2, title: "Speaker", url: "http://flipkart.com/item" }
+        ]
+      }
+    ]);
 
     expect(result).toEqual({ 0: [] });
     expect(generateContent).not.toHaveBeenCalled();
@@ -406,6 +437,74 @@ describe("runSearch", () => {
     expect(shoppingQueries).toEqual(
       expect.arrayContaining(["best camera drone", "best 4k smart tv"])
     );
+  });
+
+  test("asks the user to clarify an ambiguous shared budget before searching", async () => {
+    const fetchMock = mockSerper(() => ({ shopping: [], organic: [] }));
+    const query = unique("show me a drone and tv under 150000");
+
+    geminiReply({
+      budgetScope: "ambiguous",
+      intents: [
+        { category: "Drones", query: "best camera drone" },
+        { category: "Televisions", query: "best smart tv" }
+      ]
+    });
+
+    const result = await runSearch(query);
+
+    expect(result.status).toBe(200);
+    expect(result.payload.clarificationRequired).toBe(true);
+    expect(result.payload.reply).toMatch(/EACH product|combined total/i);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("applies separate category budgets before Gemini selects products", async () => {
+    const phoneListings = [
+      shoppingItem("Budget Phone Under Cap", 25000),
+      shoppingItem("Budget Phone Over Cap", 40000)
+    ];
+    const tvListings = [
+      shoppingItem("Budget TV Under Cap", 45000),
+      shoppingItem("Budget TV Over Cap", 60000)
+    ];
+
+    const fetchMock = mockSerper((endpoint, body) => {
+      if (endpoint === "shopping" && /phone/i.test(body.q)) return { shopping: phoneListings };
+      if (endpoint === "shopping" && /tv/i.test(body.q)) return { shopping: tvListings };
+      return { organic: [] };
+    });
+
+    const query = unique("phone under 30000 and tv under 50000");
+    geminiReply({
+      budgetScope: "per_product",
+      intents: [
+        { category: "Smartphones", query: "budget smartphone", budget: 30000 },
+        { category: "Televisions", query: "budget smart tv", budget: 50000 }
+      ]
+    });
+    geminiReply({
+      reply: "Phone option.",
+      category: "Smartphones",
+      picks: [{ index: 0, reason: "Within phone budget." }]
+    });
+    geminiReply({
+      reply: "TV option.",
+      category: "Televisions",
+      picks: [{ index: 0, reason: "Within TV budget." }]
+    });
+
+    const result = await runSearch(query);
+
+    expect(result.status).toBe(200);
+    expect(result.payload.results.map((product) => product.name)).toEqual([
+      "Budget Phone Under Cap",
+      "Budget TV Under Cap"
+    ]);
+    expect(result.payload.results.every((product) =>
+      product.price <= (product.category === "Smartphones" ? 30000 : 50000)
+    )).toBe(true);
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/shopping"))).toHaveLength(2);
   });
 
   test("keeps available category results when another category search fails", async () => {
