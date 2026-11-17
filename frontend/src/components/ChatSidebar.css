@@ -288,3 +288,32 @@
     border-radius: 0 18px 18px 0;
   }
 }
+
+
+:root[data-theme="dark"] .chat-sidebar {
+  border-right-color: #30475F;
+  background: linear-gradient(180deg, #182B40 0%, #13243A 100%);
+}
+
+:root[data-theme="dark"] .sidebar-top {
+  border-bottom-color: #30475F;
+  background: rgba(24, 43, 64, 0.9);
+}
+
+:root[data-theme="dark"] .sidebar-item.active {
+  border-color: #36536D;
+  background: rgba(56, 189, 248, 0.12);
+  box-shadow: inset 3px 0 0 #38BDF8;
+}
+
+:root[data-theme="dark"] .sidebar-open {
+  color: #B9C8D6;
+}
+
+:root[data-theme="dark"] .sidebar-item.active .sidebar-open {
+  color: #F4F8FC;
+}
+
+:root[data-theme="dark"] .sidebar-group-label {
+  color: #8FA4B8;
+}
