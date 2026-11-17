@@ -188,6 +188,29 @@ describe("serperRequest with a spare key", () => {
     expect(keyOf(fetchMock, 2)).toBe("spare-serper-key");
   });
 
+  test("switches to the spare when Serper reports insufficient credits as HTTP 400", async () => {
+    const request = withSpareKey();
+    let calls = 0;
+    const fetchMock = mockSerper(() => {
+      calls += 1;
+      return calls === 1
+        ? {
+            ok: false,
+            status: 400,
+            body: JSON.stringify({ error: "Not enough credits" })
+          }
+        : { organic: [{ title: "Spare key result" }] };
+    });
+
+    await expect(request("shopping", { q: "best monitor" })).resolves.toEqual({
+      organic: [{ title: "Spare key result" }]
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(keyOf(fetchMock, 0)).toBe("test-serper-key");
+    expect(keyOf(fetchMock, 1)).toBe("spare-serper-key");
+  });
+
   test("fails once both keys are out of credits", async () => {
     const request = withSpareKey();
     const fetchMock = mockSerper(() => ({ ok: false, status: 403 }));

@@ -33,8 +33,12 @@ const SERPER_API_KEYS = [process.env.SERPER_API_KEY, process.env.SERPER_API_KEY_
 let serperKeyIndex = 0;
 
 // Serper answers 402 or 403 when an account has nothing left to spend.
-function serperOutOfCredits(status) {
-  return status === 402 || status === 403;
+function serperOutOfCredits(status, providerMessage = "") {
+  return (
+    status === 402 ||
+    status === 403 ||
+    (status === 400 && /not enough credits|insufficient (?:balance|credits)/i.test(providerMessage))
+  );
 }
 
 const MAX_QUERY_LENGTH = 200;
@@ -419,7 +423,7 @@ async function serperRequest(endpoint, body) {
     const detail = String(providerMessage || "").replace(/\\s+/g, " ").slice(0, 300);
     const failure = `Serper request failed with status ${response.status}${detail ? `: ${detail}` : ""}`;
 
-    if (!serperOutOfCredits(response.status) || !hasSpare) {
+    if (!serperOutOfCredits(response.status, providerMessage) || !hasSpare) {
       throw new Error(failure);
     }
 
