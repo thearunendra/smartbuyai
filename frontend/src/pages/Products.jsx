@@ -181,19 +181,21 @@ function Products() {
 
   const toggleCompare = (product) => {
     const key = product.id || product.name;
-    setSelectedForCompare((current) => {
-      const exists = current.some((item) => (item.id || item.name) === key);
-      if (exists) {
-        setCompareNotice("");
-        return current.filter((item) => (item.id || item.name) !== key);
-      }
-      if (current.length >= 4) {
-        setCompareNotice("You can compare up to 4 products at a time.");
-        return current;
-      }
+    const exists = selectedForCompare.some((item) => (item.id || item.name) === key);
+
+    if (exists) {
+      setSelectedForCompare((current) => current.filter((item) => (item.id || item.name) !== key));
       setCompareNotice("");
-      return [...current, product];
-    });
+      return;
+    }
+
+    if (selectedForCompare.length >= 4) {
+      setCompareNotice("You can compare up to 4 products at a time.");
+      return;
+    }
+
+    setSelectedForCompare((current) => [...current, product]);
+    setCompareNotice("");
   };
 
   const toggleWishlist = async (product) => {
@@ -297,7 +299,9 @@ function Products() {
               <p className="products-count">
                 {loading
                   ? "Fetching live listings and comparing prices across stores..."
-                  : `Showing ${filteredProducts.length} of ${sortedProducts.length} listings in ${category}`}
+                  : activeFilterCount
+                  ? `Showing ${filteredProducts.length} of ${sortedProducts.length} live listings in ${category}`
+                  : `Showing ${sortedProducts.length} live listings in ${category}`}
               </p>
               {!loading && result.checkedAt && (
                 <span className="prices-checked-at">
