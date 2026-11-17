@@ -468,7 +468,7 @@ describe("runSearch", () => {
       intents: [
         { category: "Laptops", query: "best laptop" },
         { category: "Tablets", query: "best tablet" },
-        { category: "Drones", query: "best camera drone" }
+        { category: "Drones", query: "best camera drone four category regression" }
       ]
     });
     geminiReply({
@@ -524,7 +524,7 @@ describe("runSearch", () => {
     expect(shoppingQueries).toEqual(expect.arrayContaining([
       "best laptop",
       "best 5g smartphone",
-      "best camera drone",
+      "best camera drone four category regression",
       "best smart tv 4k"
     ]));
   });
