@@ -206,7 +206,7 @@ describe("extractOffersBatch", () => {
     generateContent.mockResolvedValueOnce({ text: "" });
 
     const result = await extractOffersBatch([
-      { name: "Plain Speaker", pages: [{ index: 0, title: "a", url: "u" }] }
+      { name: "Plain Speaker", pages: [{ index: 0, title: "a", url: "https://amazon.in/item" }] }
     ]);
 
     expect(result).toEqual({ 0: [] });
