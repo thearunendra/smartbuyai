@@ -139,7 +139,21 @@ app.use("/api/auth", authRouter);
 app.use("/api/chats", chatsRouter);
 app.use("/api/wishlist", wishlistRouter);
 
-// Used by Render's health check and for a quick "is it up?" test.
+// Liveness is process-only; readiness includes MongoDB because saved chats,
+// authentication and wishlist features depend on the database.
+app.get("/api/health/live", (req, res) => {
+  res.json({ ok: true });
+});
+
+app.get("/api/health/ready", (req, res) => {
+  const ready = isDBReady();
+  res.status(ready ? 200 : 503).json({
+    ok: ready,
+    database: ready ? "connected" : "disconnected"
+  });
+});
+
+// Keep the original endpoint for existing monitoring integrations.
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, database: isDBReady() ? "connected" : "disconnected" });
 });
@@ -446,16 +460,30 @@ Rules:
 1. Return one intent for each distinct product type, with its exact category
    from the allowed categories above.
 2. Write a focused Google Shopping search query for that product type only.
-3. Preserve relevant requirements and budget from the user's request.
-4. Do not include the other requested product types in an intent's query.
-5. Return at most 3 intents. If this is really one product type, return an
-   empty intents array.
+3. Put a separately stated maximum budget for a product type in that intent's
+   budget field, in rupees. Leave it out when none is stated for that type.
+4. Set budgetScope to "per_product" only when the user clearly says the same
+   maximum applies to EACH product, or gives separate budgets by product type.
+5. Set budgetScope to "combined" when the user explicitly says the amount is a
+   total/combined budget for all requested products.
+6. Set budgetScope to "ambiguous" when one budget is mentioned for multiple
+   product types without clarifying whether it is per product or combined.
+7. Set budgetScope to "none" when no budget is specified.
+8. Never silently divide a combined budget or treat an ambiguous total as a
+   per-product budget. The application will ask the user to clarify.
+9. Do not include the other requested product types in an intent's query.
+10. Return at most 3 intents. If this is really one product type, return an
+    empty intents array.
 `,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: "object",
           properties: {
+            budgetScope: {
+              type: "string",
+              enum: ["none", "per_product", "combined", "ambiguous"]
+            },
             intents: {
               type: "array",
               items: {
@@ -465,18 +493,23 @@ Rules:
                     type: "string",
                     enum: allowedCategories
                   },
-                  query: { type: "string" }
+                  query: { type: "string" },
+                  budget: { type: "integer", minimum: 1, maximum: 100000000 }
                 },
                 required: ["category", "query"]
               }
             }
           },
-          required: ["intents"]
+          required: ["intents", "budgetScope"]
         }
       }
     });
 
     const parsed = JSON.parse(response.text || "{}");
+    const budgetScopes = ["none", "per_product", "combined", "ambiguous"];
+    const budgetScope = budgetScopes.includes(parsed.budgetScope)
+      ? parsed.budgetScope
+      : "none";
     const seen = new Set();
     const intents = [];
 
@@ -494,7 +527,11 @@ Rules:
       }
 
       seen.add(category);
-      intents.push({ category, query: searchQuery });
+      const itemBudget = Number.isSafeInteger(item.budget) &&
+        item.budget > 0 && item.budget <= 100000000
+        ? item.budget
+        : null;
+      intents.push({ category, query: searchQuery, budget: itemBudget, budgetScope });
 
       if (intents.length >= 3) {
         break;
@@ -659,16 +696,70 @@ function mentionsModel(page, codes) {
   return codes.some((code) => text.includes(code));
 }
 
-// Gemini reads the search results of several products in one call.
-// Returns { [itemIndex]: [{ store, price, link }] }. Pages that don't mention
-// a product's model code are dropped before Gemini sees them.
+// Only direct HTTPS pages from known retailers and brand stores can become
+// Buy links. Merchant names are derived from the hostname, not trusted from AI.
+const MERCHANT_DOMAINS = [
+  { store: "Amazon", domains: ["amazon.in"] },
+  { store: "Flipkart", domains: ["flipkart.com"] },
+  { store: "Croma", domains: ["croma.com"] },
+  { store: "Reliance Digital", domains: ["reliancedigital.in"] },
+  { store: "Vijay Sales", domains: ["vijaysales.com"] },
+  { store: "Tata CLiQ", domains: ["tatacliq.com"] },
+  { store: "JioMart", domains: ["jiomart.com"] },
+  { store: "Pepperfry", domains: ["pepperfry.com"] },
+  { store: "Urban Ladder", domains: ["urbanladder.com"] },
+  { store: "IKEA", domains: ["ikea.com"] },
+  { store: "Wakefit", domains: ["wakefit.co"] },
+  { store: "Myntra", domains: ["myntra.com"] },
+  { store: "AJIO", domains: ["ajio.com"] },
+  { store: "Nykaa", domains: ["nykaa.com"] },
+  { store: "Decathlon", domains: ["decathlon.in"] },
+  { store: "Samsung", domains: ["samsung.com"] },
+  { store: "Apple", domains: ["apple.com"] },
+  { store: "OnePlus", domains: ["oneplus.in", "oneplus.com"] },
+  { store: "Xiaomi", domains: ["mi.com"] },
+  { store: "Vivo", domains: ["vivo.com"] },
+  { store: "OPPO", domains: ["oppo.com"] },
+  { store: "Sony", domains: ["sony.co.in", "sony.com"] },
+  { store: "LG", domains: ["lg.com"] },
+  { store: "HP", domains: ["hp.com"] },
+  { store: "Dell", domains: ["dell.com"] },
+  { store: "Lenovo", domains: ["lenovo.com"] },
+  { store: "ASUS", domains: ["asus.com"] },
+  { store: "Acer", domains: ["acer.com"] },
+  { store: "Motorola", domains: ["motorola.in", "motorola.com"] },
+  { store: "Nothing", domains: ["nothing.tech"] }
+];
+
+function trustedStoreFromUrl(value) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) {
+      return null;
+    }
+
+    const hostname = url.hostname.toLowerCase().replace(/\\.$/, "");
+    const merchant = MERCHANT_DOMAINS.find(({ domains }) =>
+      domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))
+    );
+
+    return merchant?.store || null;
+  } catch {
+    return null;
+  }
+}
+
+// Gemini reads search results, but merchant identity, URL and price shape are
+// validated deterministically before an offer can appear as a Buy link.
 async function extractOffersBatch(items) {
   const prepared = items.map((item) => {
     const codes = modelCodes(item.name);
 
     return {
       name: item.name,
-      pages: item.pages.filter((page) => mentionsModel(page, codes))
+      pages: item.pages.filter((page) =>
+        mentionsModel(page, codes) && trustedStoreFromUrl(page.url)
+      )
     };
   });
 
@@ -758,7 +849,7 @@ Rules:
 
     for (const offer of entry.offers || []) {
       const page = item.pages.find((candidate) => candidate.index === offer.page);
-      const store = (offer.store || "").trim();
+      const store = page ? trustedStoreFromUrl(page.url) : null;
 
       if (!page || !store || stores.has(store.toLowerCase())) {
         continue;
@@ -768,7 +859,10 @@ Rules:
 
       result[entry.product].push({
         store,
-        price: offer.price > 0 ? offer.price : null,
+        price: Number.isSafeInteger(offer.price) &&
+          offer.price > 0 && offer.price < 100000000
+          ? offer.price
+          : null,
         link: page.url
       });
     }
@@ -1003,15 +1097,45 @@ async function runSearch(query) {
 // Runs separate shopping searches for each detected product type, then
 // combines the picks into the single result list expected by the chat UI.
 async function runMultiProductSearch(budget, intents, answerKey) {
+  const detectedScope = intents[0]?.budgetScope;
+  const budgetScope = detectedScope && detectedScope !== "none"
+    ? detectedScope
+    : budget ? "ambiguous" : "none";
+
+  if (["combined", "ambiguous"].includes(budgetScope) &&
+      (budget || intents.some((intent) => intent.budget))) {
+    const amount = budget
+      ? "₹" + new Intl.NumberFormat("en-IN").format(budget)
+      : "the amount you mentioned";
+    const reply = budgetScope === "combined"
+      ? `You set ${amount} as the total budget for all these products. Please resend your request with a separate maximum for each category, so I can keep the whole purchase within your total budget.`
+      : `You mentioned ${amount} for multiple product categories. Is that the budget for EACH product, or the combined total? Please resend the request with that clarified.`;
+
+    return {
+      status: 200,
+      payload: {
+        message: "Budget clarification required.",
+        reply,
+        category: "Other",
+        categories: intents.map((intent) => intent.category),
+        count: 0,
+        results: [],
+        clarificationRequired: true
+      }
+    };
+  }
+
   const perIntentLimit = Math.max(1, Math.floor(6 / intents.length));
 
   const groups = await Promise.all(
     intents.map(async (intent) => {
       try {
+        const intentBudget = intent.budget ??
+          (budgetScope === "per_product" ? budget : null);
         let listings = await searchShopping(intent.query);
 
-        if (budget) {
-          listings = listings.filter((item) => item.price <= budget);
+        if (intentBudget) {
+          listings = listings.filter((item) => item.price <= intentBudget);
         }
 
         listings = listings.slice(0, 25);
@@ -1025,7 +1149,7 @@ async function runMultiProductSearch(budget, intents, answerKey) {
         try {
           answer = await pickWithGemini(
             intent.query,
-            budget,
+            intentBudget,
             listings,
             perIntentLimit
           );
@@ -1175,7 +1299,7 @@ app.post("/api/search", requireDB, optionalAuth, requireAuth, searchLimiter, asy
 // BROWSE PRODUCTS (LIVE LISTINGS, NO AI PICKS)
 // =====================================================
 
-app.get("/api/products", async (req, res) => {
+app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
   const category =
     typeof req.query.category === "string" &&
     Object.hasOwn(CATEGORY_QUERIES, req.query.category)
@@ -2062,6 +2186,7 @@ module.exports = {
     findStorePages,
     modelCodes,
     mentionsModel,
+    trustedStoreFromUrl,
     extractOffersBatch,
     mergeOffers,
     compareProducts,
