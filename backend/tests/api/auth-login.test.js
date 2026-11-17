@@ -3,6 +3,7 @@
 
 const request = require("supertest");
 const bcrypt = require("bcryptjs");
+const crypto = require("node:crypto");
 const jwt = require("jsonwebtoken");
 const { app } = require("../../app");
 const { User } = require("../../db");
@@ -45,6 +46,30 @@ describe("POST /api/auth/login", () => {
   });
 });
 
+test("migrates legacy bcrypt passwords safely, including passwords over 72 bytes", async () => {
+  const legacyPassword = "a".repeat(72) + "legacy-suffix";
+  const legacyUser = await User.create({
+    name: "Legacy",
+    email: "legacy@example.com",
+    passwordHash: await bcrypt.hash(legacyPassword, 4)
+  });
+
+  const response = await request(app)
+    .post("/api/auth/login")
+    .send({ email: legacyUser.email, password: legacyPassword });
+
+  expect(response.status).toBe(200);
+
+  const upgraded = await User.findById(legacyUser.id);
+  expect(upgraded.passwordHash.startsWith("sha256-bcrypt$")).toBe(true);
+
+  const oldTruncatedPassword = await request(app)
+    .post("/api/auth/login")
+    .send({ email: legacyUser.email, password: "a".repeat(72) });
+
+  expect(oldTruncatedPassword.status).toBe(401);
+});
+
 describe("GET /api/auth/me", () => {
   test("returns the signed-in user", async () => {
     const response = await request(app)
@@ -62,7 +87,7 @@ describe("GET /api/auth/me", () => {
     ["a token signed with another secret", `Bearer ${jwt.sign({ sub: "x" }, "other-secret")}`],
     [
       "a token signed with a non-approved algorithm",
-      `Bearer ${jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { algorithm: "HS384" })}`
+      `Bearer ${jwt.sign({ sub: "507f1f77bcf86cd799439011" }, process.env.JWT_SECRET, { algorithm: "HS384" })}`
     ],
     [
       "a token with an invalid subject",

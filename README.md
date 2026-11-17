@@ -69,7 +69,9 @@ See [`backend/.env.example`](backend/.env.example).
 - Keep `JWT_SECRET` private and at least 32 random bytes. Generate it with the
   command in `backend/.env.example`; changing it invalidates existing login
   tokens.
-- Passwords must be 8–72 UTF-8 bytes because the backend uses bcrypt.
+- Passwords must be 8–128 characters. The backend SHA-256-prehashes them
+  before bcrypt so passwords are not silently truncated at bcrypt's 72-byte limit;
+  legacy bcrypt hashes are upgraded at the next successful login.
 - JSON request bodies are capped at 20 KB; Helmet security headers and an
   explicit frontend-origin CORS allowlist are enabled.
 - Authentication, search and API requests have IP/user rate limits. The

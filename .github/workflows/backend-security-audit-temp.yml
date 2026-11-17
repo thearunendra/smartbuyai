@@ -5,6 +5,10 @@ on:
     branches: [fix/backend-security-audit]
     paths:
       - "backend/package.json"
+      - "backend/auth.js"
+      - "backend/tests/**"
+      - "backend/merchant-urls.js"
+      - ".github/workflows/backend-security-audit-temp.yml"
 
 permissions:
   contents: write

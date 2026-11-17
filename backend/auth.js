@@ -1,19 +1,28 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
+const crypto = require("node:crypto");
 const jwt = require("jsonwebtoken");
 const { User, isDBReady } = require("./db");
 
 const JWT_SECRET = process.env.JWT_SECRET || "";
 const JWT_SECRET_IS_VALID = Buffer.byteLength(JWT_SECRET, "utf8") >= 32;
 const TOKEN_EXPIRY = "7d";
-const MIN_PASSWORD_BYTES = 8;
-const MAX_BCRYPT_PASSWORD_BYTES = 72;
-const DUMMY_PASSWORD_HASH = bcrypt.hashSync(
-  "SmartBuy AI dummy password comparison",
-  10
-);
+const PASSWORD_HASH_PREFIX = "sha256-bcrypt$";
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128;
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function passwordDigest(password) {
+  // bcrypt only processes the first 72 bytes. Hashing first preserves the
+  // complete accepted password while keeping bcrypt's input below that limit.
+  return crypto.createHash("sha256").update(password, "utf8").digest("hex");
+}
+
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(
+  passwordDigest("SmartBuy AI dummy password comparison"),
+  10
+);
 
 if (!JWT_SECRET_IS_VALID) {
   console.log("Auth: JWT_SECRET must be at least 32 bytes (sign-in disabled)");
@@ -121,7 +130,6 @@ router.post("/register", async (req, res) => {
     typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password =
     typeof req.body.password === "string" ? req.body.password : "";
-  const passwordBytes = Buffer.byteLength(password, "utf8");
 
   if (!name || name.length > 80) {
     return res.status(400).json({ message: "Please enter your name." });
@@ -132,11 +140,11 @@ router.post("/register", async (req, res) => {
   }
 
   if (
-    passwordBytes < MIN_PASSWORD_BYTES ||
-    passwordBytes > MAX_BCRYPT_PASSWORD_BYTES
+    password.length < MIN_PASSWORD_LENGTH ||
+    password.length > MAX_PASSWORD_LENGTH
   ) {
     return res.status(400).json({
-      message: "Password must be between 8 and 72 UTF-8 bytes."
+      message: "Password must be between 8 and 128 characters."
     });
   }
 
@@ -152,7 +160,7 @@ router.post("/register", async (req, res) => {
     user = await User.create({
       name,
       email,
-      passwordHash: await bcrypt.hash(password, 10)
+      passwordHash: PASSWORD_HASH_PREFIX + await bcrypt.hash(passwordDigest(password), 10)
     });
   } catch (error) {
     // A concurrent registration can win after the existence check.
@@ -173,19 +181,33 @@ router.post("/login", async (req, res) => {
     typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password =
     typeof req.body.password === "string" ? req.body.password : "";
-  const passwordBytes = Buffer.byteLength(password, "utf8");
-  const passwordWithinBcryptLimit =
-    passwordBytes > 0 && passwordBytes <= MAX_BCRYPT_PASSWORD_BYTES;
+  const passwordWithinLimit =
+    password.length > 0 && password.length <= MAX_PASSWORD_LENGTH;
 
   const user = email ? await User.findOne({ email }) : null;
-  const hash = user?.passwordHash || DUMMY_PASSWORD_HASH;
-  const comparablePassword = passwordWithinBcryptLimit
-    ? password
+  const isLegacyHash = Boolean(
+    user && !user.passwordHash.startsWith(PASSWORD_HASH_PREFIX)
+  );
+  const bcryptHash = user
+    ? (isLegacyHash
+        ? user.passwordHash
+        : user.passwordHash.slice(PASSWORD_HASH_PREFIX.length))
+    : DUMMY_PASSWORD_HASH;
+  const comparablePassword = passwordWithinLimit
+    ? (isLegacyHash ? password : passwordDigest(password))
     : "invalid-password-length";
-  const passwordMatches = await bcrypt.compare(comparablePassword, hash);
+  const passwordMatches = await bcrypt.compare(comparablePassword, bcryptHash);
 
-  if (!user || !passwordWithinBcryptLimit || !passwordMatches) {
+  if (!user || !passwordWithinLimit || !passwordMatches) {
     return res.status(401).json({ message: "Invalid email or password." });
+  }
+
+  // Upgrade existing bcrypt hashes on successful login without invalidating
+  // accounts created before the SHA-256 pre-hash format was introduced.
+  if (isLegacyHash) {
+    user.passwordHash =
+      PASSWORD_HASH_PREFIX + await bcrypt.hash(passwordDigest(password), 10);
+    await user.save();
   }
 
   res.json({ token: signToken(user), user: publicUser(user) });
