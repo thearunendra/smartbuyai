@@ -319,7 +319,7 @@ function Chatbot() {
               </div>
               <div className="chat-topbar-status">
                 <i aria-hidden="true" />
-                <span>READY TO HELP</span>
+                <span>SHOPPING ASSISTANT</span>
               </div>
             </header>
 
