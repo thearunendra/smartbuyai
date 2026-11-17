@@ -110,12 +110,13 @@ describe('api', () => {
     )
 
     const pending = api('/api/search', { timeoutMs: 50 })
-    await vi.advanceTimersByTimeAsync(50)
-
-    await expect(pending).rejects.toMatchObject({
+    const rejectionAssertion = expect(pending).rejects.toMatchObject({
       name: 'TimeoutError',
       message: 'The request timed out. Please try again.'
     })
+
+    await vi.advanceTimersByTimeAsync(50)
+    await rejectionAssertion
     vi.useRealTimers()
   })
 })
