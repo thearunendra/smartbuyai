@@ -132,9 +132,18 @@ export function smartScore(product, details) {
     value: average([price, features])
   };
 
-  // Value for Money is derived from price and features, so including it in
-  // the overall average would count those two signals twice.
-  const overall = average([price, parts.ratings, features, parts.brand]);
+  // Keep stable, explicit weights for the four independent signals. "Value
+  // for Money" is a derived display metric and is not counted a second time.
+  const weightedParts = [
+    [price, 0.3],
+    [parts.ratings, 0.2],
+    [features, 0.3],
+    [parts.brand, 0.2]
+  ].filter(([value]) => value !== null && value !== undefined);
+  const totalWeight = weightedParts.reduce((sum, [, weight]) => sum + weight, 0);
+  const overall = totalWeight > 0
+    ? weightedParts.reduce((sum, [value, weight]) => sum + value * weight, 0) / totalWeight
+    : null;
 
   if (overall === null) {
     return null;
