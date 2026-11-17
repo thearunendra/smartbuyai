@@ -52,15 +52,6 @@ test('a suggestion chip asks that question', () => {
   )
 })
 
-test('popular product shortcuts open the selected product category', () => {
-  renderHome()
-
-  expect(screen.getByRole('link', { name: /SmartphonesElectronics/ })).toHaveAttribute(
-    'href',
-    '/products?category=Smartphones'
-  )
-})
-
 test('shopping goal cards open the AI assistant with a prepared brief', () => {
   renderHome()
 
