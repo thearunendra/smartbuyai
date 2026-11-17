@@ -1077,7 +1077,7 @@ async function compareProducts(products) {
 // Runs one AI search. Returns { status, payload }.
 async function runSearch(query) {
   // Version the answer cache so pre-fix single-category responses are not reused.
-  const answerKey = cacheKey("answer-v2", query);
+  const answerKey = cacheKey("answer-v3", query);
   const cachedAnswer = await getCached(answerKey);
 
   if (cachedAnswer) {
