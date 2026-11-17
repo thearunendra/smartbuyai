@@ -35,6 +35,19 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Report dependency audit findings
+        shell: bash
+        run: |
+          npm audit --json > /tmp/npm-audit.json || true
+          node -e '
+            const report = require("/tmp/npm-audit.json");
+            const entries = Object.entries(report.vulnerabilities || {});
+            console.log(`Total: ${report.metadata?.vulnerabilities?.total ?? entries.length}`);
+            for (const [name, item] of entries) {
+              console.log(`${item.severity.toUpperCase()} ${name} | direct=${item.isDirect} | range=${item.range} | fix=${JSON.stringify(item.fixAvailable)}`);
+            }
+          '
+
       - name: Run ESLint
         run: npm run lint
 
