@@ -132,7 +132,9 @@ export function smartScore(product, details) {
     value: average([price, features])
   };
 
-  const overall = average(Object.values(parts));
+  // Value for Money is derived from price and features, so including it in
+  // the overall average would count those two signals twice.
+  const overall = average([price, parts.ratings, features, parts.brand]);
 
   if (overall === null) {
     return null;
