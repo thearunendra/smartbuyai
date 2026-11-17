@@ -61,12 +61,12 @@ test('popular product shortcuts open the selected product category', () => {
   )
 })
 
-test('feature cards open the AI assistant with a ready-to-run prompt', () => {
+test('shopping goal cards open the AI assistant with a prepared brief', () => {
   renderHome()
 
-  expect(screen.getByRole('link', { name: /Shop multiple things at once/ })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: /Build a productive setup/ })).toHaveAttribute(
     'href',
-    `/chatbot?q=${encodeURIComponent('show me chair, mobile, drone and fridge under 50000')}`
+    `/chatbot?q=${encodeURIComponent('Build a work and study setup under ₹80,000')}`
   )
 })
 
