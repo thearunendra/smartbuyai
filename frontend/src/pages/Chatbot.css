@@ -100,12 +100,13 @@
   color: var(--danger);
 }
 
-/* As many columns of product cards as fit (3 on wide displays). */
+/* Readable product-card grid. The wider minimum prevents the compact
+   horizontal card layout from squeezing names, prices and store offers. */
 .msg-products {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
-  gap: 12px;
-  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  align-items: stretch;
   width: 100%;
   min-width: 0;
 }
@@ -119,6 +120,28 @@
   gap: 20px;
   width: 100%;
   min-width: 0;
+}
+
+/* A single category should use the whole conversation width, not one half
+   of the two-column layout. */
+.msg-product-groups-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Chat cards use the same image-first grid treatment as the Products page,
+   with slightly less vertical space. */
+.msg-product-groups .product-card-grid .product-media {
+  height: 156px;
+  padding: 14px;
+}
+
+.msg-product-groups .product-card-grid .product-body {
+  gap: 7px;
+  padding: 12px 14px;
+}
+
+.msg-product-groups .product-card-grid .product-price {
+  font-size: 20px;
 }
 
 .msg-product-group {
