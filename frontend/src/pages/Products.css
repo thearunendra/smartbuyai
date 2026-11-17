@@ -180,3 +180,356 @@
     width: 100%;
   }
 }
+
+
+/* Phase 1 shopping tools: advanced listing filters and product comparison */
+.products-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 15px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filter-toggle.active,
+.filter-toggle:hover {
+  border-color: #38BDF8;
+  background: #F0F8FD;
+}
+
+.filter-toggle span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 21px;
+  height: 21px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #14263D;
+  color: #FFFFFF;
+  font-size: 11px;
+}
+
+.product-filters {
+  margin: 0 0 18px;
+  padding: 20px;
+  border: 1px solid #DCEAF5;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #FFFFFF, #F6FBFE);
+  box-shadow: 0 8px 24px rgba(20, 38, 61, 0.045);
+}
+
+.filter-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filter-heading strong,
+.filter-heading span {
+  display: block;
+}
+
+.filter-heading strong {
+  color: #14263D;
+  font-size: 16px;
+}
+
+.filter-heading span {
+  margin-top: 3px;
+  color: #6A7E91;
+  font-size: 12px;
+}
+
+.filter-heading button {
+  border: 0;
+  background: transparent;
+  color: #176B91;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.filter-heading button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.filter-fields {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.filter-fields label {
+  display: grid;
+  gap: 7px;
+  color: #455D73;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.filter-fields select,
+.filter-fields input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 11px;
+  border: 1px solid #D7E4EF;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #14263D;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.filter-fields select:focus,
+.filter-fields input:focus {
+  border-color: #38BDF8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+}
+
+.filter-results-count {
+  margin-top: 13px;
+  color: #6D8093;
+  font-size: 12px;
+}
+
+.compare-notice {
+  margin: 0 0 12px;
+  color: #8A4B22;
+  font-size: 13px;
+}
+
+.compare-dock {
+  position: sticky;
+  bottom: 12px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 22px 0 0;
+  padding: 13px 15px;
+  border: 1px solid #B8DDF2;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 14px 34px rgba(20, 38, 61, 0.15);
+  backdrop-filter: blur(12px);
+}
+
+.compare-dock-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.compare-dock-copy strong,
+.compare-dock-copy span {
+  display: block;
+}
+
+.compare-dock-copy strong {
+  color: #14263D;
+  font-size: 14px;
+}
+
+.compare-dock-copy span {
+  overflow: hidden;
+  margin-top: 3px;
+  color: #728499;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compare-open {
+  min-height: 42px;
+  padding-inline: 17px;
+  background: #14263D;
+  border-color: #14263D;
+  color: #FFFFFF;
+}
+
+.compare-open:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.compare-clear {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+}
+
+.compare-panel {
+  margin: 20px 0 12px;
+  padding: 23px;
+  border: 1px solid #DCEAF5;
+  border-radius: 20px;
+  background: #FFFFFF;
+  box-shadow: 0 12px 34px rgba(20, 38, 61, 0.07);
+}
+
+.compare-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.compare-panel-heading span {
+  color: #167CA8;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 1.2px;
+}
+
+.compare-panel-heading h2 {
+  margin-top: 5px;
+  color: #14263D;
+  font-size: 24px;
+  letter-spacing: -0.5px;
+}
+
+.compare-panel-heading p {
+  margin-top: 5px;
+  color: #6B7F92;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.compare-table-scroll {
+  overflow-x: auto;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.compare-table th,
+.compare-table td {
+  min-width: 150px;
+  padding: 13px 14px;
+  border-bottom: 1px solid #E7EEF4;
+  color: #314A61;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.compare-table thead th {
+  background: #F0F8FD;
+  color: #14263D;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.compare-table thead th:first-child {
+  min-width: 145px;
+  border-radius: 11px 0 0 0;
+}
+
+.compare-table thead th:last-child {
+  border-radius: 0 11px 0 0;
+}
+
+.compare-table thead th > span {
+  display: inline-block;
+  max-width: 210px;
+  vertical-align: middle;
+}
+
+.compare-table thead th button {
+  display: inline-flex;
+  margin-left: 7px;
+  padding: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #71869A;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.compare-table tbody th {
+  color: #667B90;
+  font-weight: 700;
+}
+
+.compare-table td a {
+  color: #176B91;
+  font-weight: 750;
+  text-decoration: underline;
+}
+
+.compare-footnote {
+  margin-top: 13px;
+  color: #7B8D9E;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1080px) {
+  .filter-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .products-controls {
+    width: 100%;
+  }
+
+  .filter-toggle,
+  .sort-select {
+    flex: 1;
+  }
+
+  .filter-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .compare-dock {
+    flex-wrap: wrap;
+  }
+
+  .compare-dock-copy {
+    flex-basis: calc(100% - 50px);
+  }
+
+  .compare-open {
+    flex: 1;
+  }
+
+  .compare-panel {
+    padding: 15px;
+  }
+}
+
+@media (max-width: 420px) {
+  .filter-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-dock-copy span {
+    white-space: normal;
+  }
+}
