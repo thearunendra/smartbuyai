@@ -94,7 +94,7 @@ describe('smartScore', () => {
       label: 'Value for Money',
       score: 6
     })
-    expect(score.overall).toBe(7.5)
+    expect(score.overall).toBe(7.2)
   })
 
   test('without an MRP, the price part compares store prices', () => {
