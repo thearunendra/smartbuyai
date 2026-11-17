@@ -17,7 +17,9 @@ const {
   trustedStoreFromUrl,
   extractOffersBatch,
   compareProducts,
-  runSearch
+  runSearch,
+  findExplicitProductCategories,
+  detectSearchIntents
 } = internals;
 
 const listings = [
@@ -28,6 +30,72 @@ const listings = [
 
 beforeEach(() => {
   jest.spyOn(console, "log").mockImplementation(() => {});
+});
+
+describe("multi-category intent planner", () => {
+  test("maps chair, mobile, drone and fridge to the correct catalogue types", () => {
+    expect(findExplicitProductCategories(
+      "show me chair, mobile, drone and fridge under 50000"
+    )).toEqual([
+      "Office Chairs",
+      "Smartphones",
+      "Drones",
+      "Refrigerators"
+    ]);
+  });
+
+  test("does not split a product feature into a second product search", () => {
+    expect(findExplicitProductCategories(
+      "show me a phone with a good camera and 5G"
+    )).toEqual(["Smartphones"]);
+  });
+
+  test("recognizes ten distinct product types from one natural-language request", () => {
+    const query = [
+      "show me chair, mobile, drone, fridge, sofa, laptop, tv,",
+      "headphones, smartwatch and mixer grinder under 50000"
+    ].join(" ");
+
+    expect(findExplicitProductCategories(query)).toEqual([
+      "Office Chairs",
+      "Smartphones",
+      "Drones",
+      "Refrigerators",
+      "Sofas",
+      "Laptops",
+      "Televisions",
+      "Headphones",
+      "Smartwatches",
+      "Mixer Grinders"
+    ]);
+  });
+
+  test("does not lose explicit categories when Gemini returns only a partial intent list", async () => {
+    const query = unique(
+      "show me chair, mobile, drone and fridge under 50000"
+    );
+
+    geminiReply({
+      budgetScope: "per_product",
+      intents: [
+        { category: "Smartphones", query: "best 5g smartphone" },
+        { category: "Drones", query: "best camera drone" }
+      ]
+    });
+
+    const intents = await detectSearchIntents(query);
+
+    expect(intents.map((intent) => intent.category)).toEqual([
+      "Office Chairs",
+      "Smartphones",
+      "Drones",
+      "Refrigerators"
+    ]);
+    expect(intents.find((intent) => intent.category === "Office Chairs").query)
+      .toMatch(/office chair/i);
+    expect(intents.find((intent) => intent.category === "Refrigerators").query)
+      .toMatch(/refrigerator/i);
+  });
 });
 
 describe("pickWithGemini", () => {
@@ -529,6 +597,71 @@ describe("runSearch", () => {
     ]));
   });
 
+  test("runs ten requested product searches and returns results for every category", async () => {
+    const tag = unique("ten-category");
+    const catalogue = [
+      ["Office Chairs", "best ergonomic office chair", "Featherlite Ergonomic Office Chair"],
+      ["Smartphones", "best 5g smartphone", "Samsung Galaxy A55 5G Smartphone"],
+      ["Drones", "best camera drone", "DJI Mini 4K Camera Drone"],
+      ["Refrigerators", "best refrigerator", "Samsung Double Door Refrigerator"],
+      ["Sofas", "best 3 seater sofa", "Wakefit 3 Seater Sofa"],
+      ["Laptops", "best laptop", "ASUS Vivobook 15 Laptop"],
+      ["Televisions", "best smart tv 4k", "Sony Bravia 4K Smart TV"],
+      ["Headphones", "best over ear headphones", "Sony Wireless Headphones"],
+      ["Smartwatches", "best smartwatch", "Noise ColorFit Smartwatch"],
+      ["Mixer Grinders", "best mixer grinder", "Preethi Zodiac Mixer Grinder"]
+    ].map(([category, query, name], index) => ({
+      category,
+      query: query + " " + tag,
+      product: shoppingItem(name + " " + tag, 12000 + index * 1000)
+    }));
+
+    const fetchMock = mockSerper((endpoint, body) => {
+      if (endpoint !== "shopping") return { organic: [] };
+      const match = catalogue.find((item) => body.q === item.query);
+      return { shopping: match ? [match.product] : [] };
+    });
+
+    const query = unique(
+      "show me chair, mobile, drone, fridge, sofa, laptop, tv, headphones, smartwatch and mixer grinder under 50000"
+    );
+
+    geminiReply({
+      budgetScope: "per_product",
+      intents: catalogue.map((item) => ({
+        category: item.category,
+        query: item.query
+      }))
+    });
+
+    for (let index = 0; index < catalogue.length; index += 1) {
+      geminiReply({
+        reply: "Here is a suitable option.",
+        category: catalogue[index].category,
+        picks: [{ index: 0, reason: "A suitable option within your budget." }]
+      });
+    }
+
+    const result = await runSearch(query);
+
+    expect(result.status).toBe(200);
+    expect(result.payload.categories).toEqual(catalogue.map((item) => item.category));
+    expect(result.payload.missingCategories).toEqual([]);
+    expect(result.payload.count).toBe(10);
+    expect(result.payload.results.map((item) => item.category)).toEqual(
+      catalogue.map((item) => item.category)
+    );
+    expect(result.payload.results.every((item) => item.price <= 50000)).toBe(true);
+
+    const shoppingCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).endsWith("/shopping")
+    );
+    expect(shoppingCalls).toHaveLength(10);
+    expect(shoppingCalls.map(([, options]) => JSON.parse(options.body).q)).toEqual(
+      expect.arrayContaining(catalogue.map((item) => item.query))
+    );
+  });
+
   test("clarifies an explicitly combined purchase budget before searching", async () => {
     const fetchMock = mockSerper(() => ({ shopping: [], organic: [] }));
     const query = unique("show me a drone and tv with a total budget of 150000");
@@ -632,6 +765,7 @@ describe("runSearch", () => {
     expect(result.payload.count).toBe(1);
     expect(result.payload.results[0].name).toBe("Test Smart Television");
     expect(result.payload.reply).toMatch(/couldn't fetch Drones listings/i);
+    expect(result.payload.missingCategories).toEqual(["Drones"]);
   });
 
   test("doesn't cache an answer with a failed price comparison", async () => {
