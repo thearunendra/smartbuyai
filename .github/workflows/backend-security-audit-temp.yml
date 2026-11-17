@@ -1,0 +1,74 @@
+name: Backend security audit validation (temporary)
+
+on:
+  push:
+    branches: [fix/backend-security-audit]
+    paths:
+      - "backend/package.json"
+
+permissions:
+  contents: write
+
+jobs:
+  security-audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/backend-security-audit
+
+      - name: Set up Node.js 20 (Render runtime)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Regenerate lockfile with security overrides
+        run: npm install --package-lock-only --ignore-scripts --no-audit
+
+      - name: Install exact locked dependencies
+        run: npm ci
+
+      - name: Require a clean full dependency audit
+        shell: bash
+        run: |
+          npm audit --json > /tmp/backend-audit.json || true
+          node -e '
+            const report = require("/tmp/backend-audit.json");
+            const entries = Object.entries(report.vulnerabilities || {});
+            console.log("Vulnerability totals:", JSON.stringify(report.metadata?.vulnerabilities || {}));
+            for (const [name, item] of entries) {
+              const advisories = (item.via || []).filter((via) => typeof via === "object")
+                .map((via) => via.url || via.name || via.title);
+              console.log(item.severity.toUpperCase(), name, "range=" + item.range, "via=" + advisories.join(", "));
+            }
+            if (entries.length > 0) process.exit(1);
+          '
+
+      - name: Audit production dependencies independently
+        run: npm audit --omit=dev --audit-level=low
+
+      - name: Run backend tests
+        run: npm test -- --runInBand
+
+      - name: Run backend coverage suite
+        run: npm run test:coverage
+
+      - name: Commit the verified lockfile
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "Lockfile already matches package.json."
+            exit 0
+          fi
+          git commit -m "chore(security): refresh patched backend dependency lockfile"
+          git push origin HEAD:${GITHUB_REF_NAME}
