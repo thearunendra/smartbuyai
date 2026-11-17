@@ -309,7 +309,7 @@ function Chatbot() {
           />
 
           <section className="chat-main">
-            <header className="chat-topbar">
+            <header className="chat-topbar" role="banner" aria-label="SmartBuy AI chat workspace">
               <div className="chat-topbar-identity">
                 <span className="chat-topbar-mark"><Bot size={20} /></span>
                 <div>
