@@ -27,21 +27,6 @@ const suggestions = [
   "ANC headphones under ₹5,000"
 ];
 
-const popularCategoryNames = [
-  "Smartphones",
-  "Laptops",
-  "Refrigerators",
-  "Office Chairs",
-  "Drones",
-  "Headphones",
-  "Mixer Grinders",
-  "Air Conditioners"
-];
-
-const popularCategories = popularCategoryNames
-  .map((name) => CATEGORIES.find((category) => category.name === name))
-  .filter(Boolean);
-
 const shoppingIntents = [
   {
     icon: Laptop,
@@ -351,36 +336,6 @@ function Home() {
             <span><strong>AI-powered recommendations</strong><small>Shortlists with useful reasons</small></span>
             <ArrowUpRight size={16} className="trust-arrow" />
           </Link>
-        </section>
-
-        <section className="container home-section popular-section">
-          <div className="section-heading section-heading-row">
-            <div>
-              <span>Jump right in</span>
-              <h2>What are you looking for?</h2>
-              <p>Choose a popular product type and start comparing.</p>
-            </div>
-            <Link to="/products" className="text-link">
-              Explore all products <ArrowRight size={16} />
-            </Link>
-          </div>
-
-          <div className="popular-grid">
-            {popularCategories.map(({ name, icon: Icon, department }) => (
-              <Link
-                key={name}
-                to={`/products?category=${encodeURIComponent(name)}`}
-                className="popular-card"
-              >
-                <span className="popular-icon"><Icon size={22} /></span>
-                <span className="popular-copy">
-                  <strong>{name}</strong>
-                  <small>{department}</small>
-                </span>
-                <ArrowUpRight size={17} className="popular-arrow" />
-              </Link>
-            ))}
-          </div>
         </section>
 
         <section className="container home-section">
