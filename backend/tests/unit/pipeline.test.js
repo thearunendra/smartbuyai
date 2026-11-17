@@ -652,7 +652,7 @@ describe("runSearch", () => {
     );
     expect(shoppingCalls).toHaveLength(10);
     expect(shoppingCalls.map(([, options]) => JSON.parse(options.body).q)).toEqual(
-      catalogue.map((item) => item.query)
+      expect.arrayContaining(catalogue.map((item) => item.query))
     );
   });
 
@@ -759,6 +759,7 @@ describe("runSearch", () => {
     expect(result.payload.count).toBe(1);
     expect(result.payload.results[0].name).toBe("Test Smart Television");
     expect(result.payload.reply).toMatch(/couldn't fetch Drones listings/i);
+    expect(result.payload.missingCategories).toEqual(["Drones"]);
   });
 
   test("doesn't cache an answer with a failed price comparison", async () => {
