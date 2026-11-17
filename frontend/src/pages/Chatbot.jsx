@@ -190,9 +190,11 @@ function Chatbot() {
     let savedId = conversationId;
 
     try {
-      const data = await api("/api/search", {
+      const data = await api(user ? "/api/search" : "/api/search/guest", {
         method: "POST",
-        body: { query: userMessage, conversationId: conversationId || undefined }
+        body: user
+          ? { query: userMessage, conversationId: conversationId || undefined }
+          : { query: userMessage }
       });
 
       savedId = data.conversationId || conversationId;
@@ -228,7 +230,7 @@ function Chatbot() {
       navigate(`/chatbot/${savedId}`, { replace: true });
     }
 
-    refreshChats();
+    if (user) refreshChats();
     setLoading(false);
     inputRef.current?.focus();
   };
@@ -237,7 +239,7 @@ function Chatbot() {
   useEffect(() => {
     const question = searchParams.get("q");
 
-    if (user && question && !askedFromUrl.current) {
+    if (question && !askedFromUrl.current) {
       askedFromUrl.current = true;
       setSearchParams({}, { replace: true });
       searchProducts(question);
@@ -281,10 +283,9 @@ function Chatbot() {
     return <Navbar />;
   }
 
-  // The assistant is for signed-in users: every chat is saved to history.
-  if (!user) {
+  // Saved conversation URLs remain private; guests may start a fresh trial chat.
+  if (!user && chatId) {
     const next = encodeURIComponent(location.pathname + location.search);
-
     return <Navigate to={`/login?next=${next}`} replace />;
   }
 
@@ -298,7 +299,7 @@ function Chatbot() {
       <main className="chat-page">
         <div className="chat-shell">
           <ChatSidebar
-            chats={chats}
+            chats={user ? chats : []}
             activeId={currentId}
             open={sidebarOpen}
             disabled={loading}
@@ -357,8 +358,8 @@ function Chatbot() {
 
                   <p>
                     Tell me what you need, how much you want to spend and
-                    which features matter. I'll help you explore matching
-                    products and compare available store offers.
+                    which features matter. You can try SmartBuy AI without
+                    signing in; sign in to save chats and your wishlist.
                   </p>
 
                   <div className="welcome-benefits" aria-label="What SmartBuy AI can help with">
