@@ -685,6 +685,8 @@ You are SmartBuy AI, a shopping assistant for customers in India.
 User request:
 ${userQuery}
 
+${expectedCategory ? `Requested product category: ${expectedCategory}. Only choose products that clearly belong to this category.` : ""}
+
 ${budget ? `Budget: up to ₹${budget}` : "Budget: not specified"}
 
 Live listings from Google Shopping (prices in INR):
@@ -1210,7 +1212,8 @@ async function runMultiProductSearch(query, budget, intents, answerKey) {
       try {
         const intentBudget = intent.budget ??
           (budgetScope === "per_product" ? budget : null);
-        let listings = await searchShopping(intent.query);\n        listings = listings.filter((product) => isProductInCategory(intent.category, product));
+        let listings = await searchShopping(intent.query);
+        listings = listings.filter((product) => isProductInCategory(intent.category, product));
 
         if (intentBudget) {
           listings = listings.filter((item) => item.price <= intentBudget);
@@ -1229,7 +1232,8 @@ async function runMultiProductSearch(query, budget, intents, answerKey) {
             intent.query,
             intentBudget,
             listings,
-            perIntentLimit
+            perIntentLimit,
+            intent.category
           );
         } catch (error) {
           console.log("Gemini Error (" + intent.category + "):", error.message);
