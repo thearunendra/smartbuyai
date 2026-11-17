@@ -300,6 +300,7 @@ function Chatbot() {
         <div className="chat-shell">
           <ChatSidebar
             chats={user ? chats : []}
+            guest={!user}
             activeId={currentId}
             open={sidebarOpen}
             disabled={loading}
