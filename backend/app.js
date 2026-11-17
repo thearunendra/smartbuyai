@@ -738,7 +738,7 @@ function trustedStoreFromUrl(value) {
       return null;
     }
 
-    const hostname = url.hostname.toLowerCase().replace(/\\.$/, "");
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
     const merchant = MERCHANT_DOMAINS.find(({ domains }) =>
       domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))
     );
