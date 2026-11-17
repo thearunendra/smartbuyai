@@ -397,10 +397,30 @@ async function serperRequest(endpoint, body) {
 
     const hasSpare = serperKeyIndex + 1 < SERPER_API_KEYS.length;
 
+    // Preserve the provider's safe diagnostic message. Previously only the
+    // HTTP status was logged, making invalid-request responses impossible to
+    // distinguish from provider/account problems in production.
+    const responseText = await response.text().catch(() => "");
+    let providerMessage = "";
+
+    if (responseText) {
+      try {
+        const body = JSON.parse(responseText);
+        providerMessage =
+          body?.error?.message ||
+          body?.message ||
+          (typeof body?.error === "string" ? body.error : "") ||
+          "";
+      } catch {
+        providerMessage = responseText;
+      }
+    }
+
+    const detail = String(providerMessage || "").replace(/\\s+/g, " ").slice(0, 300);
+    const failure = `Serper request failed with status ${response.status}${detail ? `: ${detail}` : ""}`;
+
     if (!serperOutOfCredits(response.status) || !hasSpare) {
-      throw new Error(
-        `Serper request failed with status ${response.status}`
-      );
+      throw new Error(failure);
     }
 
     console.log(

@@ -25,7 +25,12 @@ function mockSerper(handler) {
     }
 
     if (result && typeof result.status === "number" && !result.ok) {
-      return { ok: false, status: result.status, json: async () => ({}) };
+      return {
+        ok: false,
+        status: result.status,
+        json: async () => ({}),
+        text: async () => result.body || ""
+      };
     }
 
     return { ok: true, status: 200, json: async () => result };

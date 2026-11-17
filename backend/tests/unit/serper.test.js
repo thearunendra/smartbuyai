@@ -54,6 +54,18 @@ describe("serperRequest", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  test("includes the provider's safe error message for a rejected request", async () => {
+    mockSerper(() => ({
+      ok: false,
+      status: 400,
+      body: JSON.stringify({ error: { message: "Invalid search parameters." } })
+    }));
+
+    await expect(serperRequest("shopping", { q: "best monitor" })).rejects.toThrow(
+      "Serper request failed with status 400: Invalid search parameters."
+    );
+  });
+
   test("fails without calling Serper when the key is missing", async () => {
     const saved = process.env.SERPER_API_KEY;
     let request;
