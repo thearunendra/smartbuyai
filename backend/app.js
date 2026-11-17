@@ -1555,6 +1555,7 @@ app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
       category,
       query,
       count: products.length,
+      checkedAt: new Date().toISOString(),
       products
     };
 
