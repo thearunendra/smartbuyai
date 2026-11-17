@@ -137,71 +137,171 @@ const CATEGORY_QUERIES = {
 // Categories Gemini can assign to a chat search (used in admin stats).
 const CATEGORIES = [...Object.keys(CATEGORY_QUERIES), "Other"];
 
-const MAX_MULTI_SEARCH_INTENTS = 6;
-const MAX_MULTI_SEARCH_RESULTS = 8;
+const MAX_MULTI_SEARCH_INTENTS = 10;
+const MAX_MULTI_SEARCH_RESULTS = 20;
+const MULTI_SEARCH_CONCURRENCY = 4;
 
-// Explicit aliases keep common shopping types deterministic. In particular,
-// "mobile" means Smartphones, not Tablets, and four requested types are not
-// silently truncated to three by the language model.
-const EXPLICIT_CATEGORY_ALIASES = {
-  Laptops: ["laptop", "laptops", "notebook", "notebooks", "macbook", "chromebook", "ultrabook"],
-  Smartphones: ["smartphone", "smartphones", "mobile phone", "mobile phones", "mobile", "mobiles", "cell phone", "cell phones", "phone", "phones", "iphone", "android phone"],
-  Tablets: ["tablet", "tablets", "ipad", "ipads", "android tablet"],
-  Drones: ["camera drone", "drone", "drones", "quadcopter", "quadcopters", "mavic", "phantom"],
-  Televisions: ["smart television", "television", "televisions", "smart tv", "tvs", "tv"],
-  Headphones: ["headphones", "headphone", "headset", "headsets"],
-  Earbuds: ["earbuds", "airpods", "tws"],
-  Cameras: ["dslr", "mirrorless camera", "camera", "cameras"],
-  Smartwatches: ["smartwatch", "smartwatches", "smart watch", "smart watches"],
-  Speakers: ["bluetooth speaker", "speakers", "speaker"]
+// Product-name aliases across the complete browse catalogue. Canonical
+// category names and their simple singular forms are added automatically.
+const EXTRA_CATEGORY_ALIASES = {
+  Laptops: ["notebook", "macbook", "chromebook", "ultrabook", "gaming laptop"],
+  Smartphones: ["mobile", "mobiles", "mobile phone", "mobile phones", "cell phone", "cell phones", "phone", "phones", "iphone", "android phone"],
+  Tablets: ["ipad", "ipads", "android tablet", "tab"],
+  Televisions: ["tv", "tvs", "smart tv", "smart television"],
+  Monitors: ["computer monitor", "pc monitor", "display monitor"],
+  Headphones: ["headphone", "headset", "headsets", "over ear headphones", "wireless headphones"],
+  Earbuds: ["earbud", "airpods", "tws", "wireless earbuds", "bluetooth earbuds"],
+  Speakers: ["speaker", "bluetooth speaker", "soundbar", "sound bars"],
+  Smartwatches: ["smart watch", "fitness watch"],
+  Cameras: ["dslr", "mirrorless camera", "digital camera", "action camera", "webcam"],
+  Gaming: ["game console", "gaming console", "playstation", "ps5", "ps4", "xbox", "nintendo switch"],
+  Printers: ["printer", "ink tank printer", "laser printer"],
+  Keyboards: ["keyboard", "mechanical keyboard"],
+  Mice: ["mouse", "wireless mouse", "gaming mouse"],
+  Routers: ["router", "wifi router", "wi-fi router"],
+  "Power Banks": ["power bank", "powerbank", "portable charger"],
+  Storage: ["portable ssd", "external ssd", "external hard drive", "hard disk", "pen drive", "usb drive", "memory card"],
+  Projectors: ["projector", "home projector"],
+  Drones: ["drone", "camera drone", "quadcopter", "mavic", "phantom", "fpv drone"],
+  "Air Conditioners": ["air conditioner", "air conditioning", "ac", "split ac", "window ac"],
+  Refrigerators: ["refrigerator", "fridge", "freezer", "double door fridge", "single door fridge", "side by side fridge"],
+  "Washing Machines": ["washing machine", "washer", "front load washer", "top load washer"],
+  Microwaves: ["microwave", "microwave oven", "convection oven"],
+  Fans: ["fan", "ceiling fan", "table fan", "pedestal fan"],
+  "Water Purifiers": ["water purifier", "ro purifier", "ro water purifier", "uv water purifier"],
+  "Vacuum Cleaners": ["vacuum cleaner", "vacuum", "robot vacuum", "handheld vacuum"],
+  "Air Purifiers": ["air purifier", "hepa air purifier"],
+  Geysers: ["geyser", "water heater", "instant water heater"],
+  Sofas: ["sofa", "couch", "sectional sofa", "sofa set"],
+  Beds: ["bed", "bed frame", "queen size bed", "king size bed", "single bed", "double bed"],
+  Mattresses: ["mattress", "memory foam mattress", "latex mattress"],
+  "Office Chairs": ["office chair", "chair", "chairs", "ergonomic chair", "computer chair", "desk chair", "gaming chair", "mesh chair", "revolving chair"],
+  "Study Tables": ["study table", "desk", "study desk", "computer desk", "writing desk"],
+  Wardrobes: ["wardrobe", "almirah", "closet", "cupboard"],
+  Bookshelves: ["bookshelf", "book shelf", "bookcase"],
+  Bedsheets: ["bedsheet", "bed sheet", "bed sheets", "cotton sheets"],
+  Curtains: ["curtain", "blackout curtains", "window curtains"],
+  Lighting: ["light", "lights", "lamp", "lamps", "led light", "ceiling light"],
+  "Home Decor": ["home decoration", "decor", "wall decor", "decorative items"],
+  "Storage Organisers": ["storage organiser", "storage organizer", "organiser", "organizer", "organisers", "organizers"],
+  "Cleaning Supplies": ["cleaning supply", "cleaner", "floor cleaner", "mop", "cleaning products"],
+  "Bath Towels": ["bath towel", "bath towels", "towel", "towels"],
+  Cookware: ["cookware", "cookware set", "pots and pans", "non stick pan", "frying pan"],
+  "Mixer Grinders": ["mixer grinder", "mixer", "mixie", "grinder"],
+  "Pressure Cookers": ["pressure cooker"],
+  "Dinner Sets": ["dinner set", "dinner sets", "crockery set", "dinnerware"],
+  "Water Bottles": ["water bottle", "water bottles", "flask", "thermos"],
+  "Coffee Makers": ["coffee maker", "coffee machine", "espresso machine"],
+  "Kitchen Storage": ["kitchen storage", "storage containers", "food containers", "container set"],
+  "Men's Clothing": ["mens clothing", "men clothing", "men's clothes", "menswear", "men shirt", "shirts for men"],
+  "Women's Clothing": ["womens clothing", "women clothing", "women's clothes", "womenswear", "women kurta", "kurti", "saree"],
+  Footwear: ["shoes", "sneakers", "sneaker", "running shoes", "sandals", "slippers", "boots"],
+  Watches: ["watch", "wristwatch", "analog watch", "digital watch"],
+  Bags: ["bag", "backpack", "laptop bag", "handbag", "purse", "travel bag"],
+  Sunglasses: ["sunglass", "sunglasses", "shades"],
+  Jewellery: ["jewelry", "jewellery", "necklace", "bracelet", "earrings"],
+  Trimmers: ["trimmer", "beard trimmer", "shaver", "shaving machine"],
+  "Hair Dryers": ["hair dryer", "hairdryer", "blow dryer"],
+  Skincare: ["skin care", "face serum", "moisturizer", "sunscreen", "face wash"],
+  Perfumes: ["perfume", "fragrance", "body spray", "attar"],
+  Makeup: ["makeup", "cosmetics", "foundation", "lipstick", "makeup kit"],
+  "Electric Toothbrushes": ["electric toothbrush", "toothbrush"],
+  Dumbbells: ["dumbbell", "dumbbells", "weights", "weight set"],
+  Treadmills: ["treadmill", "running machine"],
+  Cycles: ["cycle", "cycles", "bicycle", "bicycles", "cycling bike"],
+  "Yoga Mats": ["yoga mat", "exercise mat"],
+  Cricket: ["cricket bat", "cricket kit", "cricket equipment"],
+  "Camping Gear": ["camping gear", "camping tent", "tent", "sleeping bag", "camping equipment"]
 };
+
+const EXPLICIT_CATEGORY_ALIASES = Object.fromEntries(
+  Object.keys(CATEGORY_QUERIES).map((category) => {
+    const canonical = category.toLowerCase();
+    const aliases = new Set([canonical]);
+    if (canonical.endsWith("s")) aliases.add(canonical.slice(0, -1));
+    for (const alias of EXTRA_CATEGORY_ALIASES[category] || []) {
+      aliases.add(alias.toLowerCase());
+    }
+    return [category, [...aliases]];
+  })
+);
 
 const CATEGORY_PRODUCT_MATCHERS = {
   Laptops: /\b(laptop|notebook|macbook|chromebook|ultrabook|thinkpad|ideapad|vivobook|zenbook|pavilion|inspiron|aspire|swift|tuf|rog|predator|legion|loq|latitude|elitebook|probook|envy|spectre|omen|victus|yoga|gram|matebook|nitro|travelmate)\b/i,
   Smartphones: /\b(smartphone|mobile|phone|cell phone|iphone|redmi|poco|oneplus|realme|samsung galaxy|galaxy [a-z0-9]+|google pixel|pixel [0-9]|vivo|oppo|iqoo|motorola|nothing phone|infinix|tecno|nokia|lava|honor)\b/i,
   Tablets: /\b(tablet|ipad|galaxy tab|redmi pad|realme pad|oneplus pad|lenovo tab|idea tab|xiaomi pad|fire hd|omnipad)\b/i,
   Drones: /\b(drone|quadcopter|mavic|phantom|avata|fpv|dji mini(?:\s+\d)?|dji air(?:\s+\d)?|autel evo)\b/i,
-  Televisions: /\b(tv|television|bravia|qled|oled tv|webos|tizen|google tv|android tv|crystal uhd|qned)\b/i
+  Televisions: /\b(tv|television|bravia|qled|oled tv|webos|tizen|google tv|android tv|crystal uhd|qned)\b/i,
+  Refrigerators: /\b(refrigerator|fridge|freezer|side[- ]by[- ]side fridge|double[- ]door fridge|single[- ]door fridge)\b/i,
+  "Office Chairs": /\b(office chair|ergonomic chair|computer chair|desk chair|gaming chair|mesh chair|revolving chair|study chair)\b/i,
+  Sofas: /\b(sofa|couch|sectional|chesterfield)\b/i,
+  "Study Tables": /\b(study table|study desk|computer desk|writing desk)\b/i,
+  "Mixer Grinders": /\b(mixer grinder|mixie|mixer\b|grinder\b)\b/i,
+  Beds: /\b(bed frame|queen size bed|king size bed|single bed|double bed|wooden bed)\b/i,
+  Mattresses: /\b(mattress|memory foam mattress|latex mattress)\b/i
 };
-
-function phrasePosition(text, phrase) {
-  // Aliases contain only words/spaces, so whitespace normalisation is enough.
-  const escaped = phrase.trim().replace(/\s+/g, "\\s+");
-  const pattern = "(^|[^a-z0-9])" + escaped + "(?=$|[^a-z0-9])";
-  const match = new RegExp(pattern, "i").exec(text);
-  return match ? match.index + match[1].length : -1;
-}
 
 function findExplicitProductCategories(query) {
   const text = String(query || "").toLowerCase();
-  const found = [];
+  const matches = [];
 
   for (const [category, aliases] of Object.entries(EXPLICIT_CATEGORY_ALIASES)) {
-    const positions = aliases
-      .map((alias) => phrasePosition(text, alias))
-      .filter((position) => position >= 0);
+    for (const alias of aliases) {
+      const escaped = alias.replace(/[.*+?^$()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+      const expression = new RegExp("(^|[^a-z0-9])(" + escaped + ")(?=$|[^a-z0-9])", "gi");
+      let match;
 
-    if (positions.length > 0) {
-      found.push({ category, position: Math.min(...positions) });
+      while ((match = expression.exec(text)) !== null) {
+        const start = match.index + match[1].length;
+        matches.push({ category, start, end: start + match[2].length });
+      }
     }
   }
 
-  // "Camera drone" is one product type, not a separate camera + drone request.
-  if (/\bcamera\s+drone\b/i.test(text)) {
-    const cameraIndex = found.findIndex((item) => item.category === "Cameras");
-    if (cameraIndex >= 0) found.splice(cameraIndex, 1);
+  // Prefer the longest phrase at a given position (e.g. "camera drone"
+  // is one drone intent, not separate camera and drone intents).
+  matches.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+
+  const occupied = [];
+  const seen = new Set();
+  const found = [];
+
+  for (const match of matches) {
+    const overlaps = occupied.some((span) => match.start < span.end && match.end > span.start);
+    if (overlaps || seen.has(match.category)) continue;
+
+    occupied.push(match);
+    seen.add(match.category);
+    found.push(match);
   }
 
   return found
-    .sort((a, b) => a.position - b.position)
+    .sort((a, b) => a.start - b.start)
     .map((item) => item.category)
     .slice(0, MAX_MULTI_SEARCH_INTENTS);
+}
+
+function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+
+  return Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (true) {
+        const index = nextIndex++;
+        if (index >= items.length) return;
+        results[index] = await mapper(items[index], index);
+      }
+    })
+  ).then(() => results);
 }
 
 function isProductInCategory(category, product) {
   const matcher = CATEGORY_PRODUCT_MATCHERS[category];
   return !matcher || matcher.test(String(product?.name || ""));
 }
+
 
 function hasExplicitCombinedBudget(query) {
   const text = String(query || "").toLowerCase();
