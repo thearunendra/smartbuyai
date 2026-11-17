@@ -47,6 +47,14 @@ const searchLimiter = limiter({
   message: "You're searching too fast. Please wait a minute and try again."
 });
 
+// Anonymous AI searches: two free trials per IP address per rolling day.
+// Signed-in users use the normal per-account search limit.
+const guestSearchLimiter = limiter({
+  windowMs: 24 * 60 * 60 * 1000,
+  limit: 2,
+  message: "You've used your 2 free AI searches for today. Sign in to continue."
+});
+
 // Everything else under /api.
 const apiLimiter = limiter({
   windowMs: 15 * 60 * 1000,
@@ -66,5 +74,6 @@ function applySecurity(app) {
 module.exports = {
   applySecurity,
   searchLimiter,
+  guestSearchLimiter,
   allowedOrigins
 };
