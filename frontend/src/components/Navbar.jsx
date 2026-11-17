@@ -54,7 +54,7 @@ function Navbar() {
           SmartBuy <span className="logo-accent">AI</span>
         </Link>
 
-        <div className={menuOpen ? "nav-links open" : "nav-links"}>
+        <div id="primary-navigation" className={menuOpen ? "nav-links open" : "nav-links"}>
           <NavLink to="/" end onClick={() => setMenuOpen(false)}>
             <Home size={16} /> Home
           </NavLink>
@@ -110,6 +110,8 @@ function Navbar() {
             className="icon-btn nav-toggle"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Toggle menu"
+            aria-controls="primary-navigation"
+            aria-expanded={menuOpen}
           >
             {menuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
