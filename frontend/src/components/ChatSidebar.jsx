@@ -13,6 +13,7 @@ const GROUP_ORDER = [
 
 function ChatSidebar({
   chats,
+  guest = false,
   activeId,
   open,
   disabled,
@@ -66,7 +67,9 @@ function ChatSidebar({
 
           {chats?.length === 0 && (
             <p className="sidebar-empty">
-              Your chats will appear here.
+              {guest
+                ? "Guest chats are temporary. Sign in to save conversations and revisit them here."
+                : "Your chats will appear here."}
             </p>
           )}
 
