@@ -70,14 +70,15 @@ test('feature cards open the AI assistant with a ready-to-run prompt', () => {
   )
 })
 
-test('the multi-product preview button starts the example search', () => {
+test('the decision hub lets visitors explore each shopping step', () => {
   renderHome()
 
-  fireEvent.click(screen.getByRole('button', { name: /Try this multi-product search/ }))
+  const discoverStep = screen.getByRole('button', { name: /02 Discover/ })
+  fireEvent.click(discoverStep)
 
-  expect(screen.getByTestId('path')).toHaveTextContent(
-    `/chatbot?q=${encodeURIComponent('show me chair, mobile, drone and fridge under 50000')}`
-  )
+  expect(discoverStep).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByText('Find options that fit your brief.')).toBeInTheDocument()
+  expect(screen.getByText(/product discovery/i)).toBeInTheDocument()
 })
 
 test('department cards open the products page', () => {
