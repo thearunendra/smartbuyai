@@ -1,7 +1,26 @@
 const { Redis } = require("@upstash/redis");
 
-// Cached results are served for this long before Serper is called again.
-const CACHE_TTL_SECONDS = 6 * 60 * 60;
+// Keep volatile price/search data short-lived; specifications and images
+// change less often. Unlisted prefixes keep the previous six-hour default.
+const DEFAULT_CACHE_TTL_SECONDS = 6 * 60 * 60;
+const CACHE_TTL_SECONDS_BY_PREFIX = Object.freeze({
+  shopping: 15 * 60,
+  pages: 15 * 60,
+  offers: 15 * 60,
+  page: 15 * 60,
+  "answer-v2": 15 * 60,
+  specs: 6 * 60 * 60,
+  images: 24 * 60 * 60
+});
+
+function ttlForKey(key, override) {
+  if (Number.isFinite(override) && override > 0) {
+    return Math.max(1, Math.floor(override));
+  }
+
+  const prefix = String(key).split(":")[1];
+  return CACHE_TTL_SECONDS_BY_PREFIX[prefix] || DEFAULT_CACHE_TTL_SECONDS;
+}
 
 // Recent entries are also kept in memory so repeat reads skip the network.
 const MEMORY_LIMIT = 500;
@@ -72,15 +91,16 @@ async function getCached(key) {
   }
 }
 
-async function setCached(key, value) {
-  setMemory(key, value, Date.now() + CACHE_TTL_SECONDS * 1000);
+async function setCached(key, value, options = {}) {
+  const ttlSeconds = ttlForKey(key, options.ttlSeconds);
+  setMemory(key, value, Date.now() + ttlSeconds * 1000);
 
   if (!redis) {
     return;
   }
 
   try {
-    await redis.set(key, value, { ex: CACHE_TTL_SECONDS });
+    await redis.set(key, value, { ex: ttlSeconds });
   } catch (error) {
     console.log("Redis Error:", error.message);
   }
@@ -90,5 +110,7 @@ module.exports = {
   cacheKey,
   getCached,
   setCached,
+  ttlForKey,
+  CACHE_TTL_SECONDS_BY_PREFIX,
   cacheMode: redis ? "Upstash Redis" : "in-memory (UPSTASH_REDIS_* not set)"
 };
