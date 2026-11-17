@@ -17,7 +17,9 @@ const {
   trustedStoreFromUrl,
   extractOffersBatch,
   compareProducts,
-  runSearch
+  runSearch,
+  findExplicitProductCategories,
+  detectSearchIntents
 } = internals;
 
 const listings = [
@@ -28,6 +30,66 @@ const listings = [
 
 beforeEach(() => {
   jest.spyOn(console, "log").mockImplementation(() => {});
+});
+
+describe("multi-category intent planner", () => {
+  test("maps chair, mobile, drone and fridge to the correct catalogue types", () => {
+    expect(findExplicitProductCategories(
+      "show me chair, mobile, drone and fridge under 50000"
+    )).toEqual([
+      "Office Chairs",
+      "Smartphones",
+      "Drones",
+      "Refrigerators"
+    ]);
+  });
+
+  test("recognizes ten distinct product types from one natural-language request", () => {
+    const query = [
+      "show me chair, mobile, drone, fridge, sofa, laptop, tv,",
+      "headphones, smartwatch and mixer grinder under 50000"
+    ].join(" ");
+
+    expect(findExplicitProductCategories(query)).toEqual([
+      "Office Chairs",
+      "Smartphones",
+      "Drones",
+      "Refrigerators",
+      "Sofas",
+      "Laptops",
+      "Televisions",
+      "Headphones",
+      "Smartwatches",
+      "Mixer Grinders"
+    ]);
+  });
+
+  test("does not lose explicit categories when Gemini returns only a partial intent list", async () => {
+    const query = unique(
+      "show me chair, mobile, drone and fridge under 50000"
+    );
+
+    geminiReply({
+      budgetScope: "per_product",
+      intents: [
+        { category: "Smartphones", query: "best 5g smartphone" },
+        { category: "Drones", query: "best camera drone" }
+      ]
+    });
+
+    const intents = await detectSearchIntents(query);
+
+    expect(intents.map((intent) => intent.category)).toEqual([
+      "Office Chairs",
+      "Smartphones",
+      "Drones",
+      "Refrigerators"
+    ]);
+    expect(intents.find((intent) => intent.category === "Office Chairs").query)
+      .toMatch(/office chair/i);
+    expect(intents.find((intent) => intent.category === "Refrigerators").query)
+      .toMatch(/refrigerator/i);
+  });
 });
 
 describe("pickWithGemini", () => {
