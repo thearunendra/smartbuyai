@@ -41,7 +41,7 @@ describe("POST /api/auth/login", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.user.email).toBe("ravi@example.com");
-    expect(jwt.verify(response.body.token, "test-secret").sub).toBe(user.id);
+    expect(jwt.verify(response.body.token, process.env.JWT_SECRET, { algorithms: ["HS256"] }).sub).toBe(user.id);
   });
 });
 
@@ -61,8 +61,16 @@ describe("GET /api/auth/me", () => {
     ["a non-Bearer header", `Basic ${Buffer.from("a:b").toString("base64")}`],
     ["a token signed with another secret", `Bearer ${jwt.sign({ sub: "x" }, "other-secret")}`],
     [
+      "a token signed with a non-approved algorithm",
+      `Bearer ${jwt.sign({ sub: user.id }, process.env.JWT_SECRET, { algorithm: "HS384" })}`
+    ],
+    [
+      "a token with an invalid subject",
+      `Bearer ${jwt.sign({ sub: "not-an-object-id" }, process.env.JWT_SECRET, { algorithm: "HS256" })}`
+    ],
+    [
       "an expired token",
-      `Bearer ${jwt.sign({ sub: "x", exp: Math.floor(Date.now() / 1000) - 60 }, "test-secret")}`
+      `Bearer ${jwt.sign({ sub: "x", exp: Math.floor(Date.now() / 1000) - 60 }, process.env.JWT_SECRET)}`
     ],
     ["a malformed token", "Bearer not-a-token"]
   ])("treats %s as a guest (401)", async (_, header) => {

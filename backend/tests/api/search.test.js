@@ -291,6 +291,16 @@ describe("errors, CORS and health", () => {
     expect(response.body.message).toBe("Invalid request body.");
   });
 
+  test("rejects JSON request bodies over the 20 KB limit with 413", async () => {
+    const response = await request(app)
+      .post("/api/auth/login")
+      .set("Content-Type", "application/json")
+      .send({ padding: "x".repeat(21 * 1024) });
+
+    expect(response.status).toBe(413);
+    expect(response.body.message).toBe("Request body is too large.");
+  });
+
   test("unexpected errors answer 500 without details", async () => {
     const { auth } = await newUser();
 

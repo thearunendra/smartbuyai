@@ -72,19 +72,47 @@ describe("POST /api/wishlist", () => {
     // At most 10 offers are kept, and offers without a store are dropped.
     expect(saved.offers).toHaveLength(8);
     expect(saved.offers[0]).toEqual(product.offers[0]);
-    expect(saved.offers[1]).toEqual({ store: "S0", price: 0, link: null });
+    expect(saved.offers[1]).toEqual({ store: "S0", price: null, link: null });
   });
 
   test.each([
     ["no product", {}],
     ["a product without a name", { product: { ...product, name: "  " } }],
     ["a product without a price", { product: { ...product, price: "₹58,990" } }],
+    ["a product with a zero price", { product: { ...product, price: 0 } }],
+    ["a product with a fractional price", { product: { ...product, price: 58.99 } }],
     ["a product that isn't an object", { product: "iPhone" }]
   ])("rejects %s", async (_, body) => {
     const response = await save(user, body);
 
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Please choose a product.");
+  });
+
+  test("rejects unsafe image and non-merchant offer URLs", async () => {
+    const response = await save(user, {
+      product: {
+        ...product,
+        image: "javascript:alert(1)",
+        rating: 7,
+        reviews: -1,
+        offers: [
+          { store: "Bad seller", price: -100, link: "data:text/html,alert(1)" },
+          { store: "Lookalike seller", price: 1000, link: "https://amazon.in.attacker.example/item" },
+          { store: "Real seller", price: 1000, link: "https://amazon.in/product/123" }
+        ]
+      }
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.item.product.image).toBeNull();
+    expect(response.body.item.product.rating).toBeNull();
+    expect(response.body.item.product.reviews).toBeNull();
+    expect(response.body.item.product.offers).toEqual([
+      { store: "Bad seller", price: null, link: null },
+      { store: "Lookalike seller", price: 1000, link: null },
+      { store: "Amazon", price: 1000, link: "https://amazon.in/product/123" }
+    ]);
   });
 
   test("saving the same product again updates it instead of adding another", async () => {

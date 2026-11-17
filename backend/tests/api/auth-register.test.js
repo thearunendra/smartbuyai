@@ -26,8 +26,9 @@ test.each([
     { ...valid, email: `${"a".repeat(250)}@example.com` },
     "Please enter a valid email."
   ],
-  ["a password under 8 characters", { ...valid, password: "short" }, "Password must be at least 8 characters."],
-  ["a password over 128 characters", { ...valid, password: "p".repeat(129) }, "Password must be at least 8 characters."]
+  ["a password under 8 bytes", { ...valid, password: "short" }, "Password must be between 8 and 72 UTF-8 bytes."],
+  ["a password over 72 bytes", { ...valid, password: "p".repeat(73) }, "Password must be between 8 and 72 UTF-8 bytes."],
+  ["a unicode password over 72 UTF-8 bytes", { ...valid, password: "🔒".repeat(19) }, "Password must be between 8 and 72 UTF-8 bytes."]
 ])("rejects %s", async (_, body, message) => {
   const response = await register(body);
 

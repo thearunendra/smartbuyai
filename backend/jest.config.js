@@ -16,6 +16,7 @@ module.exports = {
     "chats.js",
     "db.js",
     "security.js",
+    "merchant-urls.js",
     "wishlist.js"
   ],
   coverageReporters: ["text", "text-summary", "html", "json-summary"],
