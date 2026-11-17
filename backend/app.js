@@ -133,8 +133,6 @@ const CATEGORY_QUERIES = {
 // Categories Gemini can assign to a chat search (used in admin stats).
 const CATEGORIES = [...Object.keys(CATEGORY_QUERIES), "Other"];
 
-const CATEGORIES = [...Object.keys(CATEGORY_QUERIES), "Other"];
-
 const MAX_MULTI_SEARCH_INTENTS = 6;
 const MAX_MULTI_SEARCH_RESULTS = 8;
 
