@@ -26,7 +26,7 @@ function renderHome() {
 test('asking a question opens the chatbot with it', () => {
   renderHome()
 
-  fireEvent.change(screen.getByRole('textbox', { name: 'Ask SmartBuy AI' }), {
+  fireEvent.change(screen.getByRole('textbox', { name: 'What are you shopping for?' }), {
     target: { value: '  tv under 30k  ' }
   })
   fireEvent.click(screen.getByRole('button', { name: /Ask AI/ }))
@@ -49,6 +49,34 @@ test('a suggestion chip asks that question', () => {
 
   expect(screen.getByTestId('path')).toHaveTextContent(
     `/chatbot?q=${encodeURIComponent('Gaming laptop under ₹80,000')}`
+  )
+})
+
+test('popular product shortcuts open the selected product category', () => {
+  renderHome()
+
+  expect(screen.getByRole('link', { name: /Smartphones Electronics/ })).toHaveAttribute(
+    'href',
+    '/products?category=Smartphones'
+  )
+})
+
+test('feature cards open the AI assistant with a ready-to-run prompt', () => {
+  renderHome()
+
+  expect(screen.getByRole('link', { name: /Shop multiple things at once/ })).toHaveAttribute(
+    'href',
+    `/chatbot?q=${encodeURIComponent('show me chair, mobile, drone and fridge under 50000')}`
+  )
+})
+
+test('the multi-product preview button starts the example search', () => {
+  renderHome()
+
+  fireEvent.click(screen.getByRole('button', { name: /Try this multi-product search/ }))
+
+  expect(screen.getByTestId('path')).toHaveTextContent(
+    `/chatbot?q=${encodeURIComponent('show me chair, mobile, drone and fridge under 50000')}`
   )
 })
 
