@@ -35,7 +35,12 @@ function mockApi() {
 
     if (path === '/api/search' || path === '/api/search/guest') {
       if (searchReply instanceof Error) throw searchReply
-      return typeof searchReply === 'function' ? searchReply(options.body) : searchReply
+      const reply = typeof searchReply === 'function' ? searchReply(options.body) : searchReply
+      if (path === '/api/search/guest') {
+        const { conversationId, ...guestReply } = reply
+        return guestReply
+      }
+      return reply
     }
 
     if (path.startsWith('/api/chats/') && options.method === 'DELETE') return null
@@ -94,7 +99,7 @@ describe('access', () => {
 
   test('guests can open a fresh trial chat without signing in', () => {
     useAuth.mockReturnValue({ user: null, checking: false })
-    renderChat('/chatbot?q=tv')
+    renderChat('/chatbot')
 
     expect(screen.getByRole('heading', { name: 'What are you shopping for?' })).toBeInTheDocument()
     expect(screen.getByTestId('path')).toHaveTextContent('/chatbot')
