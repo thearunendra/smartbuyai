@@ -122,6 +122,29 @@ describe('asking', () => {
     await waitFor(() => expect(screen.getByTestId('path')).toHaveTextContent('/chatbot/new1'))
   })
 
+  test('uses the full-width image-first grid for one-category chat results', async () => {
+    searchReply = {
+      reply: 'Here are four smartphone options.',
+      count: 4,
+      results: [
+        { ...product, id: 'phone-1', category: 'Smartphones' },
+        { ...product, id: 'phone-2', name: 'Phone Two', category: 'Smartphones' },
+        { ...product, id: 'phone-3', name: 'Phone Three', category: 'Smartphones' },
+        { ...product, id: 'phone-4', name: 'Phone Four', category: 'Smartphones' }
+      ]
+    };
+
+    const { container } = renderChat();
+    ask('mobile phones');
+
+    expect(await screen.findByRole('heading', { name: /Smartphones/ })).toBeInTheDocument();
+
+    const groups = container.querySelector('.msg-product-groups');
+    expect(groups).toHaveClass('msg-product-groups-single');
+    expect(groups.querySelectorAll('.product-card-grid')).toHaveLength(4);
+    expect(groups.querySelectorAll('.product-card-row')).toHaveLength(0);
+  });
+
   test('groups multi-category recommendations into separate sections', async () => {
     searchReply = {
       reply: 'Here are options in both categories.',

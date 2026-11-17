@@ -392,7 +392,7 @@ function Chatbot() {
                                 <ProductCard
                                   key={product.id || product.name}
                                   product={product}
-                                  layout="row"
+                                  layout="grid"
                                 />
                               ))}
                             </div>
@@ -400,7 +400,7 @@ function Chatbot() {
                         }
 
                         return (
-                          <div className="msg-product-groups">
+                          <div className={`msg-product-groups${groups.length === 1 ? " msg-product-groups-single" : ""}`}>
                             {groups.map(({ category, products }) => (
                               <section className="msg-product-group" key={category}>
                                 <h3 className="msg-product-group-title">
@@ -412,7 +412,7 @@ function Chatbot() {
                                     <ProductCard
                                       key={product.id || product.name}
                                       product={product}
-                                      layout="row"
+                                      layout="grid"
                                     />
                                   ))}
                                 </div>
