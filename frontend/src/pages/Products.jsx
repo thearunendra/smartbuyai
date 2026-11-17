@@ -97,6 +97,7 @@ function Products() {
           setResult({
             key: requestKey,
             products: data.products || [],
+            checkedAt: data.checkedAt || null,
             error: data.products?.length ? "" : data.message || ""
           });
         }
@@ -292,11 +293,21 @@ function Products() {
               </button>
             </div>
           ) : (
-            <p className="products-count">
-              {loading
-                ? "Fetching live listings and comparing prices across stores..."
-                : `Showing ${filteredProducts.length} of ${sortedProducts.length} listings in ${category}`}
-            </p>
+            <div className="products-count-block">
+              <p className="products-count">
+                {loading
+                  ? "Fetching live listings and comparing prices across stores..."
+                  : `Showing ${filteredProducts.length} of ${sortedProducts.length} listings in ${category}`}
+              </p>
+              {!loading && result.checkedAt && (
+                <span className="prices-checked-at">
+                  Prices last checked {new Date(result.checkedAt).toLocaleString("en-IN", {
+                    day: "2-digit", month: "short", year: "numeric",
+                    hour: "2-digit", minute: "2-digit"
+                  })}
+                </span>
+              )}
+            </div>
           )}
 
           <div className="products-controls">
