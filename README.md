@@ -60,9 +60,21 @@ See [`backend/.env.example`](backend/.env.example).
 | `GEMINI_API_KEY` | yes | Google AI Studio key |
 | `SERPER_API_KEY` | yes | Live Google Shopping prices |
 | `MONGODB_URI` | yes | MongoDB Atlas connection string |
-| `JWT_SECRET` | yes | Long random string for login tokens |
+| `JWT_SECRET` | yes | Random secret of at least 32 bytes for HS256 login tokens |
 | `CORS_ORIGINS` | yes in production | Frontend URL(s), comma-separated |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | optional | Shared cache that survives restarts |
+
+### Backend security baseline
+
+- Keep `JWT_SECRET` private and at least 32 random bytes. Generate it with the
+  command in `backend/.env.example`; changing it invalidates existing login
+  tokens.
+- Passwords must be 8–72 UTF-8 bytes because the backend uses bcrypt.
+- JSON request bodies are capped at 20 KB; Helmet security headers and an
+  explicit frontend-origin CORS allowlist are enabled.
+- Authentication, search and API requests have IP/user rate limits. The
+  built-in rate-limit counters are per backend process; use a shared rate-limit
+  store before running multiple API replicas.
 
 ### Admin access
 

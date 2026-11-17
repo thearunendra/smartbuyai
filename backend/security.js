@@ -30,6 +30,8 @@ function limiter({ windowMs, limit, message, byUser = false }) {
   });
 }
 
+// Note: the default express-rate-limit MemoryStore is process-local. Use a
+// shared store before scaling across multiple backend instances.
 // Sign-in and sign-up: slows down password guessing.
 const authLimiter = limiter({
   windowMs: 15 * 60 * 1000,
