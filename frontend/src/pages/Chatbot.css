@@ -103,19 +103,34 @@
 /* As many columns of product cards as fit (3 on wide displays). */
 .msg-products {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
   gap: 12px;
   align-items: start;
+  width: 100%;
+  min-width: 0;
 }
 
+/* Show category groups side by side on desktop, with their product cards
+   arranged in a compact grid. This keeps a multi-category answer scannable
+   without leaving most of the chat canvas empty. */
 .msg-product-groups {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
+  width: 100%;
+  min-width: 0;
 }
 
 .msg-product-group {
   display: grid;
+  align-content: start;
   gap: 10px;
+  min-width: 0;
+}
+
+.msg-ai,
+.msg-content {
+  width: 100%;
   min-width: 0;
 }
 
@@ -291,6 +306,12 @@
   height: 44px;
   padding: 0;
   border-radius: var(--radius-lg);
+}
+
+@media (max-width: 980px) {
+  .msg-product-groups {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
