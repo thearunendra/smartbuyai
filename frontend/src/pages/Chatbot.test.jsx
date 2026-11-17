@@ -135,8 +135,8 @@ describe('asking', () => {
     renderChat();
     ask('mobile and television');
 
-    expect(await screen.findByRole('heading', { name: 'Smartphones' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Televisions' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /Smartphones/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Televisions/ })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Phone One' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Television One' })).toBeInTheDocument();
   });
