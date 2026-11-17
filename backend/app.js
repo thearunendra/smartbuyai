@@ -233,7 +233,7 @@ const CATEGORY_PRODUCT_MATCHERS = {
   Drones: /\b(drone|quadcopter|mavic|phantom|avata|fpv|dji mini(?:\s+\d)?|dji air(?:\s+\d)?|autel evo)\b/i,
   Televisions: /\b(tv|television|bravia|qled|oled tv|webos|tizen|google tv|android tv|crystal uhd|qned)\b/i,
   Refrigerators: /\b(refrigerator|fridge|freezer|side[- ]by[- ]side fridge|double[- ]door fridge|single[- ]door fridge)\b/i,
-  "Office Chairs": /\b(office chair|ergonomic chair|computer chair|desk chair|gaming chair|mesh chair|revolving chair|study chair)\b/i,
+  "Office Chairs": /\b(chair|office chair|ergonomic chair|computer chair|desk chair|gaming chair|mesh chair|revolving chair|study chair)\b/i,
   Sofas: /\b(sofa|couch|sectional|chesterfield)\b/i,
   "Study Tables": /\b(study table|study desk|computer desk|writing desk)\b/i,
   "Mixer Grinders": /\b(mixer grinder|mixie|mixer\b|grinder\b)\b/i,
