@@ -44,6 +44,12 @@ describe("multi-category intent planner", () => {
     ]);
   });
 
+  test("does not split a product feature into a second product search", () => {
+    expect(findExplicitProductCategories(
+      "show me a phone with a good camera and 5G"
+    )).toEqual(["Smartphones"]);
+  });
+
   test("recognizes ten distinct product types from one natural-language request", () => {
     const query = [
       "show me chair, mobile, drone, fridge, sofa, laptop, tv,",
