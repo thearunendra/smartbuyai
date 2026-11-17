@@ -71,7 +71,9 @@ test("migrates legacy bcrypt passwords safely, including passwords over 72 bytes
 });
 
 test("handles missing request bodies without throwing a server error", async () => {
-  const response = await request(app).post("/api/auth/login");
+  const response = await request(app)
+    .post("/api/auth/login")
+    .set("X-Forwarded-For", "198.51.100.77");
 
   expect(response.status).toBe(401);
   expect(response.body.message).toBe("Invalid email or password.");
@@ -84,6 +86,7 @@ test.each([
 ])("rejects a %s JSON request body", async (_, body) => {
   const response = await request(app)
     .post("/api/auth/login")
+    .set("X-Forwarded-For", "198.51.100.78")
     .set("Content-Type", "application/json")
     .send(body);
 

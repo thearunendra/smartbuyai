@@ -134,7 +134,7 @@ const CATEGORY_QUERIES = {
 const CATEGORIES = [...Object.keys(CATEGORY_QUERIES), "Other"];
 
 applySecurity(app);
-app.use(express.json({ limit: "20kb" }));
+app.use(express.json({ limit: "20kb", strict: false }));
 
 // Do not let missing, null, primitive or array payloads crash route handlers.
 app.use((req, res, next) => {
