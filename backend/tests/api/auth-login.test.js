@@ -88,7 +88,7 @@ test.each([
     .post("/api/auth/login")
     .set("X-Forwarded-For", "198.51.100.78")
     .set("Content-Type", "application/json")
-    .send(body);
+    .send(JSON.stringify(body));
 
   expect(response.status).toBe(400);
   expect(response.body.message).toBe("Request body must be a JSON object.");
