@@ -1,14 +1,42 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ShoppingBag, Sparkles, Star } from "lucide-react";
+import { ArrowRight, Check, Heart, Scale, ShoppingBag, Sparkles, Star } from "lucide-react";
 import StoreOffers from "./StoreOffers";
 import { productPath } from "../utils/product";
 import "./ProductCard.css";
 
 // layout: "grid" (Products page) or "row" (chat results).
-function ProductCard({ product, layout = "grid" }) {
+function ProductCard({ product, layout = "grid", selectedForCompare = false, onCompare, isWishlisted = false, wishlistBusy = false, onWishlist }) {
   return (
     <article className={`product-card product-card-${layout}`}>
       <div className="product-media">
+        {(onCompare || onWishlist) && (
+          <div className="product-card-actions">
+            {onWishlist && (
+              <button
+                type="button"
+                className={isWishlisted ? "product-quick-action saved" : "product-quick-action"}
+                onClick={onWishlist}
+                disabled={wishlistBusy}
+                aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+              >
+                <Heart size={17} fill={isWishlisted ? "currentColor" : "none"} />
+              </button>
+            )}
+            {onCompare && (
+              <button
+                type="button"
+                className={selectedForCompare ? "product-quick-action selected" : "product-quick-action"}
+                onClick={onCompare}
+                aria-pressed={selectedForCompare}
+                aria-label={selectedForCompare ? "Remove from comparison" : "Add to comparison"}
+                title={selectedForCompare ? "Remove from comparison" : "Add to comparison"}
+              >
+                {selectedForCompare ? <Check size={17} /> : <Scale size={17} />}
+              </button>
+            )}
+          </div>
+        )}
         {product.image ? (
           <img
             src={product.image}
