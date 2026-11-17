@@ -9,6 +9,7 @@ import CategoryTabs from '../components/CategoryTabs'
 import { DEPARTMENTS } from '../data/categories'
 
 vi.mock('../components/Navbar', () => ({ default: () => <nav aria-label="Navbar" /> }))
+vi.mock('../auth', () => ({ useAuth: () => ({ user: null }) }))
 
 const listings = [
   { id: 'a', name: 'Phone A', price: 20000, store: 'Amazon', rating: 4.1 },
@@ -120,6 +121,48 @@ describe('Products', () => {
     })
 
     expect(names()).toEqual(expected)
+  })
+
+  test('filters listings by a minimum price', async () => {
+    renderProducts()
+    await screen.findByText(/in Smartphones/)
+
+    fireEvent.click(screen.getByRole('button', { name: /Filters/ }))
+    fireEvent.change(screen.getByLabelText('Minimum price (₹)'), { target: { value: '15000' } })
+
+    expect(names()).toEqual(['Phone A', 'Phone C'])
+    expect(screen.getByText('2 matching listings')).toBeInTheDocument()
+  })
+
+  test('selects two products and opens a side-by-side comparison', async () => {
+    renderProducts()
+    await screen.findByText(/in Smartphones/)
+
+    const compareButtons = screen.getAllByRole('button', { name: 'Add to comparison' })
+    fireEvent.click(compareButtons[0])
+    fireEvent.click(compareButtons[1])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Compare 2 products' }))
+
+    expect(screen.getByRole('region', { name: 'Product comparison' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Compare your shortlist' })).toBeInTheDocument()
+    expect(screen.getByText('Best listed store')).toBeInTheDocument()
+    expect(screen.getByText('Technical specifications')).toBeInTheDocument()
+  })
+
+  test('does not allow more than four products in comparison', async () => {
+    respond({ products: [
+      ...listings,
+      { id: 'd', name: 'Phone D', price: 25000, store: 'Store D' },
+      { id: 'e', name: 'Phone E', price: 30000, store: 'Store E' }
+    ] })
+    renderProducts()
+    await screen.findByText(/in Smartphones/)
+
+    const buttons = screen.getAllByRole('button', { name: 'Add to comparison' })
+    buttons.slice(0, 5).forEach((button) => fireEvent.click(button))
+
+    expect(screen.getByRole('status')).toHaveTextContent('up to 4 products')
   })
 
   test("shows the server's message when nothing is found", async () => {
