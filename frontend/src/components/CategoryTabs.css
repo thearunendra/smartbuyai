@@ -71,7 +71,7 @@
 .category-tab.active {
   background: var(--primary);
   color: var(--primary-text);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.22);
 }
 
 .tabs-arrow {
