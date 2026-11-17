@@ -188,13 +188,13 @@ describe("GET /api/products", () => {
 
     for (let index = 0; index < 10; index += 1) {
       const response = await request(app)
-        .get("/api/products?category=Smartphones")
+        .get(`/api/products?category=Smartphones&q=${encodeURIComponent(unique("rate limited browse"))}`)
         .set(auth);
       expect(response.status).toBe(200);
     }
 
     const blocked = await request(app)
-      .get("/api/products?category=Smartphones")
+      .get(`/api/products?category=Smartphones&q=${encodeURIComponent(unique("rate limited browse"))}`)
       .set(auth);
 
     expect(blocked.status).toBe(429);
