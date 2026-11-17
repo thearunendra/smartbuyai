@@ -49,11 +49,12 @@ describe('api', () => {
     fetchMock.mockResolvedValue(reply(200, { ok: true }))
 
     await expect(api('/api/health')).resolves.toEqual({ ok: true })
-    expect(fetchMock).toHaveBeenCalledWith(`${API_URL}/api/health`, {
+    expect(fetchMock).toHaveBeenCalledWith(`${API_URL}/api/health`, expect.objectContaining({
       method: 'GET',
       headers: {},
-      body: undefined
-    })
+      body: undefined,
+      signal: expect.any(AbortSignal)
+    }))
   })
 
   test('sends the token and a JSON body', async () => {
@@ -62,11 +63,12 @@ describe('api', () => {
 
     await api('/api/wishlist', { method: 'POST', body: { a: 1 } })
 
-    expect(fetchMock).toHaveBeenCalledWith(`${API_URL}/api/wishlist`, {
+    expect(fetchMock).toHaveBeenCalledWith(`${API_URL}/api/wishlist`, expect.objectContaining({
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer tok' },
-      body: '{"a":1}'
-    })
+      body: '{"a":1}',
+      signal: expect.any(AbortSignal)
+    }))
   })
 
   test('204 returns null', async () => {
@@ -97,5 +99,23 @@ describe('api', () => {
     fetchMock.mockResolvedValue(reply(200, null, { json: false }))
 
     await expect(api('/api/x')).resolves.toEqual({})
+  })
+
+  test('aborts a request that exceeds its timeout', async () => {
+    vi.useFakeTimers()
+    fetchMock.mockImplementation((_url, { signal }) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+      })
+    )
+
+    const pending = api('/api/search', { timeoutMs: 50 })
+    await vi.advanceTimersByTimeAsync(50)
+
+    await expect(pending).rejects.toMatchObject({
+      name: 'TimeoutError',
+      message: 'The request timed out. Please try again.'
+    })
+    vi.useRealTimers()
   })
 })
