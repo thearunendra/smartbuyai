@@ -4,7 +4,21 @@
 const request = require("supertest");
 const { app } = require("../../app");
 
-test("the health check reports the database as disconnected", async () => {
+test("liveness remains healthy while MongoDB is disconnected", async () => {
+  const response = await request(app).get("/api/health/live");
+
+  expect(response.status).toBe(200);
+  expect(response.body).toEqual({ ok: true });
+});
+
+test("readiness fails while MongoDB is disconnected", async () => {
+  const response = await request(app).get("/api/health/ready");
+
+  expect(response.status).toBe(503);
+  expect(response.body).toEqual({ ok: false, database: "disconnected" });
+});
+
+test("the legacy health endpoint still reports database status", async () => {
   const response = await request(app).get("/api/health");
 
   expect(response.status).toBe(200);
