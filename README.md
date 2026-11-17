@@ -60,9 +60,23 @@ See [`backend/.env.example`](backend/.env.example).
 | `GEMINI_API_KEY` | yes | Google AI Studio key |
 | `SERPER_API_KEY` | yes | Live Google Shopping prices |
 | `MONGODB_URI` | yes | MongoDB Atlas connection string |
-| `JWT_SECRET` | yes | Long random string for login tokens |
+| `JWT_SECRET` | yes | Random secret of at least 32 bytes for HS256 login tokens |
 | `CORS_ORIGINS` | yes in production | Frontend URL(s), comma-separated |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | optional | Shared cache that survives restarts |
+
+### Backend security baseline
+
+- Keep `JWT_SECRET` private and at least 32 random bytes. Generate it with the
+  command in `backend/.env.example`; changing it invalidates existing login
+  tokens.
+- Passwords must be 8–128 characters. The backend SHA-256-prehashes them
+  before bcrypt so passwords are not silently truncated at bcrypt's 72-byte limit;
+  legacy bcrypt hashes are upgraded at the next successful login.
+- JSON request bodies are capped at 20 KB; Helmet security headers and an
+  explicit frontend-origin CORS allowlist are enabled.
+- Authentication, search and API requests have IP/user rate limits. The
+  built-in rate-limit counters are per backend process; use a shared rate-limit
+  store before running multiple API replicas.
 
 ### Admin access
 
@@ -98,7 +112,10 @@ In MongoDB Atlas, allow network access from Render (e.g. `0.0.0.0/0`).
 
 - Gemini free tier: 15 requests/minute. The backend queues calls to stay
   under it; a search or products page uses about 3 calls.
-- Serper: each chat search uses about 8 credits and each products page about
-  11. Results are cached for 6 hours.
-- Prices in the comparison are read from search results and can lag the
-  store; users are asked to confirm on the store.
+- Serper usage varies with the number of product categories, products
+  compared and cache hits. Volatile shopping listings, merchant pages, offers
+  and final search answers are cached for 15 minutes; product specifications
+  are cached for 6 hours and gallery images for 24 hours.
+- Prices in the comparison are retrieved from search-result data, not a
+  guaranteed live merchant feed. They can lag the store; users should confirm
+  the final price and product variant on the merchant site.

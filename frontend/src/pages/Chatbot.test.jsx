@@ -122,6 +122,25 @@ describe('asking', () => {
     await waitFor(() => expect(screen.getByTestId('path')).toHaveTextContent('/chatbot/new1'))
   })
 
+  test('groups multi-category recommendations into separate sections', async () => {
+    searchReply = {
+      reply: 'Here are options in both categories.',
+      count: 2,
+      results: [
+        { ...product, id: 'phone-1', category: 'Smartphones' },
+        { ...product, id: 'tv-1', name: 'Television One', category: 'Televisions' }
+      ]
+    };
+
+    renderChat();
+    ask('mobile and television');
+
+    expect(await screen.findByRole('heading', { name: /Smartphones/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Televisions/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Phone One' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Television One' })).toBeInTheDocument();
+  });
+
   test('the next question continues the same chat', async () => {
     renderChat()
     ask('first')

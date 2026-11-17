@@ -83,6 +83,20 @@ describe('smartScore', () => {
     )
   })
 
+  test('does not count the derived value score again in the overall score', () => {
+    const score = smartScore(
+      { price: 95, rating: 4.5, reviews: 9999, offers: [] },
+      { mrp: 100, featureScore: 5, brandScore: 9 }
+    )
+
+    expect(score.rows.find((row) => row.key === 'value')).toEqual({
+      key: 'value',
+      label: 'Value for Money',
+      score: 6
+    })
+    expect(score.overall).toBe(7.2)
+  })
+
   test('without an MRP, the price part compares store prices', () => {
     const score = smartScore(
       { price: 800, offers: [{ price: 800 }, { price: 1000 }, { price: null }] },

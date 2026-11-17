@@ -1,6 +1,7 @@
 const express = require("express");
 const { WishlistItem } = require("./db");
 const { optionalAuth, requireAuth, requireDB } = require("./auth");
+const { trustedMerchantUrl, trustedStoreFromUrl } = require("./merchant-urls");
 
 // Saved products per user.
 const MAX_ITEMS = 100;
@@ -9,12 +10,43 @@ const router = express.Router();
 
 router.use(requireDB, optionalAuth, requireAuth);
 
-function cleanNumber(value) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
 function cleanString(value, maxLength) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+function cleanPrice(value) {
+  return Number.isSafeInteger(value) && value > 0 && value < 100000000
+    ? value
+    : null;
+}
+
+function cleanRating(value) {
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 0 &&
+    value <= 5
+    ? value
+    : null;
+}
+
+function cleanReviews(value) {
+  return Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function cleanHttpsUrl(value, maxLength) {
+  const candidate = cleanString(value, maxLength);
+
+  if (!candidate) return null;
+
+  try {
+    const url = new URL(candidate);
+    if (url.protocol !== "https:" || !url.hostname || url.username || url.password) {
+      return null;
+    }
+    return url.toString();
+  } catch {
+    return null;
+  }
 }
 
 // Keeps only the product card fields, so the client can't store anything else.
@@ -22,19 +54,26 @@ function cleanProduct(product) {
   return {
     id: cleanString(product.id, 300),
     name: cleanString(product.name, 300),
-    price: cleanNumber(product.price),
+    price: cleanPrice(product.price),
     store: cleanString(product.store, 80),
-    image: cleanString(product.image, 2000) || null,
-    rating: cleanNumber(product.rating),
-    reviews: cleanNumber(product.reviews),
+    image: cleanHttpsUrl(product.image, 2000),
+    rating: cleanRating(product.rating),
+    reviews: cleanReviews(product.reviews),
     reason: cleanString(product.reason, 300),
     offers: (Array.isArray(product.offers) ? product.offers : [])
       .slice(0, 10)
-      .map((offer) => ({
-        store: cleanString(offer?.store, 80),
-        price: cleanNumber(offer?.price),
-        link: cleanString(offer?.link, 2000) || null
-      }))
+      .map((offer) => {
+        const link = trustedMerchantUrl(offer?.link);
+        const store = link
+          ? trustedStoreFromUrl(link)
+          : cleanString(offer?.store, 80);
+
+        return {
+          store,
+          price: cleanPrice(offer?.price),
+          link
+        };
+      })
       .filter((offer) => offer.store)
   };
 }

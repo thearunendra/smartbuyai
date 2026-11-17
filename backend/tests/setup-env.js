@@ -2,7 +2,7 @@
 // read backend/.env, so they can't reach real services or spend credits.
 
 process.env.NODE_ENV = "test";
-process.env.JWT_SECRET = "test-secret";
+process.env.JWT_SECRET = "test-secret-for-smartbuy-backend-test-suite-2026-11";
 process.env.GEMINI_API_KEY = "test-gemini-key";
 process.env.SERPER_API_KEY = "test-serper-key";
 process.env.CORS_ORIGINS = "http://localhost:5173";

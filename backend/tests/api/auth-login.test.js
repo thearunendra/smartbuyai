@@ -3,6 +3,7 @@
 
 const request = require("supertest");
 const bcrypt = require("bcryptjs");
+const crypto = require("node:crypto");
 const jwt = require("jsonwebtoken");
 const { app } = require("../../app");
 const { User } = require("../../db");
@@ -28,7 +29,7 @@ describe("POST /api/auth/login", () => {
     ["a wrong password", { email: "ravi@example.com", password: "wrong-pass" }],
     ["a non-string password", { email: "ravi@example.com", password: 12345678 }]
   ])("rejects %s", async (_, body) => {
-    const response = await request(app).post("/api/auth/login").send(body);
+    const response = await request(app).post("/api/auth/login").send(JSON.stringify(body));
 
     expect(response.status).toBe(401);
     expect(response.body.message).toBe("Invalid email or password.");
@@ -41,8 +42,56 @@ describe("POST /api/auth/login", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.user.email).toBe("ravi@example.com");
-    expect(jwt.verify(response.body.token, "test-secret").sub).toBe(user.id);
+    expect(jwt.verify(response.body.token, process.env.JWT_SECRET, { algorithms: ["HS256"] }).sub).toBe(user.id);
   });
+});
+
+test("migrates legacy bcrypt passwords safely, including passwords over 72 bytes", async () => {
+  const legacyPassword = "a".repeat(72) + "legacy-suffix";
+  const legacyUser = await User.create({
+    name: "Legacy",
+    email: "legacy@example.com",
+    passwordHash: await bcrypt.hash(legacyPassword, 4)
+  });
+
+  const response = await request(app)
+    .post("/api/auth/login")
+    .send({ email: legacyUser.email, password: legacyPassword });
+
+  expect(response.status).toBe(200);
+
+  const upgraded = await User.findById(legacyUser.id);
+  expect(upgraded.passwordHash.startsWith("sha256-bcrypt$")).toBe(true);
+
+  const oldTruncatedPassword = await request(app)
+    .post("/api/auth/login")
+    .send({ email: legacyUser.email, password: "a".repeat(72) });
+
+  expect(oldTruncatedPassword.status).toBe(401);
+});
+
+test("handles missing request bodies without throwing a server error", async () => {
+  const response = await request(app)
+    .post("/api/auth/login")
+    .set("X-Forwarded-For", "198.51.100.77");
+
+  expect(response.status).toBe(401);
+  expect(response.body.message).toBe("Invalid email or password.");
+});
+
+test.each([
+  ["null", null],
+  ["array", []],
+  ["primitive", "not-an-object"]
+])("rejects a %s JSON request body", async (_, body) => {
+  const response = await request(app)
+    .post("/api/auth/login")
+    .set("X-Forwarded-For", "198.51.100.78")
+    .set("Content-Type", "application/json")
+    .send(JSON.stringify(body));
+
+  expect(response.status).toBe(400);
+  expect(response.body.message).toBe("Request body must be a JSON object.");
 });
 
 describe("GET /api/auth/me", () => {
@@ -61,8 +110,16 @@ describe("GET /api/auth/me", () => {
     ["a non-Bearer header", `Basic ${Buffer.from("a:b").toString("base64")}`],
     ["a token signed with another secret", `Bearer ${jwt.sign({ sub: "x" }, "other-secret")}`],
     [
+      "a token signed with a non-approved algorithm",
+      `Bearer ${jwt.sign({ sub: "507f1f77bcf86cd799439011" }, process.env.JWT_SECRET, { algorithm: "HS384" })}`
+    ],
+    [
+      "a token with an invalid subject",
+      `Bearer ${jwt.sign({ sub: "not-an-object-id" }, process.env.JWT_SECRET, { algorithm: "HS256" })}`
+    ],
+    [
       "an expired token",
-      `Bearer ${jwt.sign({ sub: "x", exp: Math.floor(Date.now() / 1000) - 60 }, "test-secret")}`
+      `Bearer ${jwt.sign({ sub: "x", exp: Math.floor(Date.now() / 1000) - 60 }, process.env.JWT_SECRET)}`
     ],
     ["a malformed token", "Bearer not-a-token"]
   ])("treats %s as a guest (401)", async (_, header) => {

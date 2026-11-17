@@ -4,7 +4,21 @@
 const request = require("supertest");
 const { app } = require("../../app");
 
-test("the health check reports the database as disconnected", async () => {
+test("liveness remains healthy while MongoDB is disconnected", async () => {
+  const response = await request(app).get("/api/health/live");
+
+  expect(response.status).toBe(200);
+  expect(response.body).toEqual({ ok: true });
+});
+
+test("readiness fails while MongoDB is disconnected", async () => {
+  const response = await request(app).get("/api/health/ready");
+
+  expect(response.status).toBe(503);
+  expect(response.body).toEqual({ ok: false, database: "disconnected" });
+});
+
+test("the legacy health endpoint still reports database status", async () => {
   const response = await request(app).get("/api/health");
 
   expect(response.status).toBe(200);
@@ -38,12 +52,12 @@ test("accounts are unavailable without JWT_SECRET", async () => {
 
     Object.defineProperty(mongoose.connection, "readyState", { get: () => 1 });
   });
-  process.env.JWT_SECRET = "test-secret";
+  process.env.JWT_SECRET = "test-secret-for-smartbuy-backend-test-suite-2026-11";
 
   const response = await request(isolatedApp).post("/api/auth/login").send({});
 
   expect(response.status).toBe(503);
   expect(console.log).toHaveBeenCalledWith(
-    "Auth: JWT_SECRET not set (sign-in disabled)"
+    "Auth: JWT_SECRET must be at least 32 bytes (sign-in disabled)"
   );
 });

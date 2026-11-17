@@ -181,6 +181,24 @@ describe("GET /api/products", () => {
     expect(response.body.products[0].name).toBe("Searched Sofa");
   });
 
+  test("limits product browsing to 10 searches per signed-in user per minute", async () => {
+    const { auth } = await newUser();
+    const query = unique("rate limited browse");
+    const path = `/api/products?category=Smartphones&q=${encodeURIComponent(query)}`;
+    serper([shoppingItem("Rate Limited Browse Product", 20000)]);
+    geminiReply({ indexes: [0] });
+
+    for (let index = 0; index < 10; index += 1) {
+      const response = await request(app).get(path).set(auth);
+      expect(response.status).toBe(200);
+    }
+
+    const blocked = await request(app).get(path).set(auth);
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.message).toMatch(/searching too fast/i);
+  });
+
   test("502 when live listings can't be fetched", async () => {
     mockSerper(() => new Error("down"));
 
@@ -253,6 +271,16 @@ describe("errors, CORS and health", () => {
     expect((await request(app).get("/api/health")).body).toEqual({ ok: true, database: "connected" });
   });
 
+  test("liveness and readiness pass when the database is connected", async () => {
+    const live = await request(app).get("/api/health/live");
+    const ready = await request(app).get("/api/health/ready");
+
+    expect(live.status).toBe(200);
+    expect(live.body).toEqual({ ok: true });
+    expect(ready.status).toBe(200);
+    expect(ready.body).toEqual({ ok: true, database: "connected" });
+  });
+
   test("invalid JSON answers 400", async () => {
     const response = await request(app)
       .post("/api/auth/login")
@@ -261,6 +289,16 @@ describe("errors, CORS and health", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.message).toBe("Invalid request body.");
+  });
+
+  test("rejects JSON request bodies over the 20 KB limit with 413", async () => {
+    const response = await request(app)
+      .post("/api/auth/login")
+      .set("Content-Type", "application/json")
+      .send({ padding: "x".repeat(21 * 1024) });
+
+    expect(response.status).toBe(413);
+    expect(response.body.message).toBe("Request body is too large.");
   });
 
   test("unexpected errors answer 500 without details", async () => {

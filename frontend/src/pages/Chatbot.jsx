@@ -31,6 +31,28 @@ const loadingSteps = [
   { at: 5000, text: "Comparing prices across stores..." }
 ];
 
+function groupProductsByCategory(products) {
+  if (!Array.isArray(products) || products.length === 0 ||
+      !products.every((product) => typeof product.category === "string" && product.category.trim())) {
+    return null;
+  }
+
+  const groups = new Map();
+
+  for (const product of products) {
+    const category = product.category.trim();
+    if (!groups.has(category)) {
+      groups.set(category, []);
+    }
+    groups.get(category).push(product);
+  }
+
+  return [...groups.entries()].map(([category, items]) => ({
+    category,
+    products: items
+  }));
+}
+
 const suggestions = [
   { icon: Smartphone, text: "Mobile under ₹20,000 with a good camera" },
   { icon: Laptop, text: "Laptop under ₹60,000 for coding" },
@@ -360,17 +382,45 @@ function Chatbot() {
                         {msg.text}
                       </div>
 
-                      {msg.products?.length > 0 && (
-                        <div className="msg-products">
-                          {msg.products.map((product) => (
-                            <ProductCard
-                              key={product.id}
-                              product={product}
-                              layout="row"
-                            />
-                          ))}
-                        </div>
-                      )}
+                      {msg.products?.length > 0 && (() => {
+                        const groups = groupProductsByCategory(msg.products);
+
+                        if (!groups) {
+                          return (
+                            <div className="msg-products">
+                              {msg.products.map((product) => (
+                                <ProductCard
+                                  key={product.id || product.name}
+                                  product={product}
+                                  layout="row"
+                                />
+                              ))}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="msg-product-groups">
+                            {groups.map(({ category, products }) => (
+                              <section className="msg-product-group" key={category}>
+                                <h3 className="msg-product-group-title">
+                                  {category}
+                                  <span>{products.length} {products.length === 1 ? "product" : "products"}</span>
+                                </h3>
+                                <div className="msg-products">
+                                  {products.map((product) => (
+                                    <ProductCard
+                                      key={product.id || product.name}
+                                      product={product}
+                                      layout="row"
+                                    />
+                                  ))}
+                                </div>
+                              </section>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )
