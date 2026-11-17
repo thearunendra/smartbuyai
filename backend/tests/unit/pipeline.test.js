@@ -439,12 +439,102 @@ describe("runSearch", () => {
     );
   });
 
-  test("asks the user to clarify an ambiguous shared budget before searching", async () => {
-    const fetchMock = mockSerper(() => ({ shopping: [], organic: [] }));
-    const query = unique("show me a drone and tv under 150000");
+  test("searches four explicitly requested categories even when Gemini omits or misclassifies one", async () => {
+    const laptopListings = [
+      shoppingItem("ASUS Vivobook 15 Laptop", 65000),
+      shoppingItem("Lenovo Idea Tab Pro Gen 2 Tablet", 30000)
+    ];
+    const phoneListings = [shoppingItem("Samsung Galaxy S25 5G Smartphone", 80000)];
+    const droneListings = [shoppingItem("DJI Mini 4K Drone", 55000)];
+    const tvListings = [shoppingItem("Sony Bravia 55 inch 4K Smart TV", 90000)];
 
+    const fetchMock = mockSerper((endpoint, body) => {
+      if (endpoint === "shopping") {
+        if (/laptop/i.test(body.q)) return { shopping: laptopListings };
+        if (/smartphone/i.test(body.q)) return { shopping: phoneListings };
+        if (/drone/i.test(body.q)) return { shopping: droneListings };
+        if (/smart tv/i.test(body.q)) return { shopping: tvListings };
+      }
+
+      return { organic: [] };
+    });
+
+    const query = unique("show me laptop, mobile, drone and tv under 100000");
+
+    // Simulate the model's old failure: it returns three intents and mistakes
+    // mobile for Tablets. Explicit terms must remain authoritative.
     geminiReply({
       budgetScope: "ambiguous",
+      intents: [
+        { category: "Laptops", query: "best laptop" },
+        { category: "Tablets", query: "best tablet" },
+        { category: "Drones", query: "best camera drone four category regression" }
+      ]
+    });
+    geminiReply({
+      reply: "Laptop options.",
+      category: "Laptops",
+      picks: [{ index: 0, reason: "A capable everyday laptop." }]
+    });
+    geminiReply({
+      reply: "Phone options.",
+      category: "Smartphones",
+      picks: [{ index: 0, reason: "A balanced smartphone." }]
+    });
+    geminiReply({
+      reply: "Drone options.",
+      category: "Drones",
+      picks: [{ index: 0, reason: "A compact camera drone." }]
+    });
+    geminiReply({
+      reply: "Television options.",
+      category: "Televisions",
+      picks: [{ index: 0, reason: "A large 4K television." }]
+    });
+
+    const result = await runSearch(query);
+
+    expect(result.status).toBe(200);
+    expect(result.payload.categories).toEqual([
+      "Laptops",
+      "Smartphones",
+      "Drones",
+      "Televisions"
+    ]);
+    expect(result.payload.count).toBe(4);
+    expect(result.payload.results.map((item) => item.category)).toEqual([
+      "Laptops",
+      "Smartphones",
+      "Drones",
+      "Televisions"
+    ]);
+    expect(result.payload.results.map((item) => item.name)).toEqual([
+      "ASUS Vivobook 15 Laptop",
+      "Samsung Galaxy S25 5G Smartphone",
+      "DJI Mini 4K Drone",
+      "Sony Bravia 55 inch 4K Smart TV"
+    ]);
+    expect(result.payload.results.every((item) => item.price <= 100000)).toBe(true);
+    expect(result.payload.results.some((item) => /Idea Tab/i.test(item.name))).toBe(false);
+
+    const shoppingQueries = fetchMock.mock.calls
+      .filter(([url]) => String(url).endsWith("/shopping"))
+      .map(([, options]) => JSON.parse(options.body).q);
+
+    expect(shoppingQueries).toEqual(expect.arrayContaining([
+      "best laptop",
+      "best 5g smartphone",
+      "best camera drone four category regression",
+      "best smart tv 4k"
+    ]));
+  });
+
+  test("clarifies an explicitly combined purchase budget before searching", async () => {
+    const fetchMock = mockSerper(() => ({ shopping: [], organic: [] }));
+    const query = unique("show me a drone and tv with a total budget of 150000");
+
+    geminiReply({
+      budgetScope: "combined",
       intents: [
         { category: "Drones", query: "best camera drone" },
         { category: "Televisions", query: "best smart tv" }
@@ -455,7 +545,7 @@ describe("runSearch", () => {
 
     expect(result.status).toBe(200);
     expect(result.payload.clarificationRequired).toBe(true);
-    expect(result.payload.reply).toMatch(/EACH product|combined total/i);
+    expect(result.payload.reply).toMatch(/total budget/i);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

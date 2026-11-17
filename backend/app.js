@@ -133,6 +133,81 @@ const CATEGORY_QUERIES = {
 // Categories Gemini can assign to a chat search (used in admin stats).
 const CATEGORIES = [...Object.keys(CATEGORY_QUERIES), "Other"];
 
+const MAX_MULTI_SEARCH_INTENTS = 6;
+const MAX_MULTI_SEARCH_RESULTS = 8;
+
+// Explicit aliases keep common shopping types deterministic. In particular,
+// "mobile" means Smartphones, not Tablets, and four requested types are not
+// silently truncated to three by the language model.
+const EXPLICIT_CATEGORY_ALIASES = {
+  Laptops: ["laptop", "laptops", "notebook", "notebooks", "macbook", "chromebook", "ultrabook"],
+  Smartphones: ["smartphone", "smartphones", "mobile phone", "mobile phones", "mobile", "mobiles", "cell phone", "cell phones", "phone", "phones", "iphone", "android phone"],
+  Tablets: ["tablet", "tablets", "ipad", "ipads", "android tablet"],
+  Drones: ["camera drone", "drone", "drones", "quadcopter", "quadcopters", "mavic", "phantom"],
+  Televisions: ["smart television", "television", "televisions", "smart tv", "tvs", "tv"],
+  Headphones: ["headphones", "headphone", "headset", "headsets"],
+  Earbuds: ["earbuds", "airpods", "tws"],
+  Cameras: ["dslr", "mirrorless camera", "camera", "cameras"],
+  Smartwatches: ["smartwatch", "smartwatches", "smart watch", "smart watches"],
+  Speakers: ["bluetooth speaker", "speakers", "speaker"]
+};
+
+const CATEGORY_PRODUCT_MATCHERS = {
+  Laptops: /\b(laptop|notebook|macbook|chromebook|ultrabook|thinkpad|ideapad|vivobook|zenbook|pavilion|inspiron|aspire|swift|tuf|rog|predator|legion|loq|latitude|elitebook|probook|envy|spectre|omen|victus|yoga|gram|matebook|nitro|travelmate)\b/i,
+  Smartphones: /\b(smartphone|mobile|phone|cell phone|iphone|redmi|poco|oneplus|realme|samsung galaxy|galaxy [a-z0-9]+|google pixel|pixel [0-9]|vivo|oppo|iqoo|motorola|nothing phone|infinix|tecno|nokia|lava|honor)\b/i,
+  Tablets: /\b(tablet|ipad|galaxy tab|redmi pad|realme pad|oneplus pad|lenovo tab|idea tab|xiaomi pad|fire hd|omnipad)\b/i,
+  Drones: /\b(drone|quadcopter|mavic|phantom|avata|fpv|dji mini(?:\s+\d)?|dji air(?:\s+\d)?|autel evo)\b/i,
+  Televisions: /\b(tv|television|bravia|qled|oled tv|webos|tizen|google tv|android tv|crystal uhd|qned)\b/i
+};
+
+function phrasePosition(text, phrase) {
+  // Aliases contain only words/spaces, so whitespace normalisation is enough.
+  const escaped = phrase.trim().replace(/\s+/g, "\\s+");
+  const pattern = "(^|[^a-z0-9])" + escaped + "(?=$|[^a-z0-9])";
+  const match = new RegExp(pattern, "i").exec(text);
+  return match ? match.index + match[1].length : -1;
+}
+
+function findExplicitProductCategories(query) {
+  const text = String(query || "").toLowerCase();
+  const found = [];
+
+  for (const [category, aliases] of Object.entries(EXPLICIT_CATEGORY_ALIASES)) {
+    const positions = aliases
+      .map((alias) => phrasePosition(text, alias))
+      .filter((position) => position >= 0);
+
+    if (positions.length > 0) {
+      found.push({ category, position: Math.min(...positions) });
+    }
+  }
+
+  // "Camera drone" is one product type, not a separate camera + drone request.
+  if (/\bcamera\s+drone\b/i.test(text)) {
+    const cameraIndex = found.findIndex((item) => item.category === "Cameras");
+    if (cameraIndex >= 0) found.splice(cameraIndex, 1);
+  }
+
+  return found
+    .sort((a, b) => a.position - b.position)
+    .map((item) => item.category)
+    .slice(0, MAX_MULTI_SEARCH_INTENTS);
+}
+
+function isProductInCategory(category, product) {
+  const matcher = CATEGORY_PRODUCT_MATCHERS[category];
+  return !matcher || matcher.test(String(product?.name || ""));
+}
+
+function hasExplicitCombinedBudget(query) {
+  const text = String(query || "").toLowerCase();
+  return (
+    /\b(?:total|combined|overall)\s+(?:purchase\s+)?budget\b/.test(text) ||
+    /\b(?:all together|altogether|for all (?:the )?(?:products|items|categories))\b/.test(text) ||
+    /\b(?:budget|spend)\b.{0,40}\b(?:combined|total|altogether|all together)\b/.test(text)
+  );
+}
+
 applySecurity(app);
 app.use(express.json({ limit: "20kb", strict: false }));
 
@@ -453,8 +528,10 @@ Rules:
 // ask Gemini to parse intents when the wording suggests more than one item;
 // ordinary searches keep the existing one-request path.
 async function detectSearchIntents(query) {
+  const explicitCategories = findExplicitProductCategories(query);
   const hasMultipleItems =
-    /\b(?:and|plus|also|along with|as well as|together with|alongside)\b|&|,\s*(?=[a-z])/i.test(query);
+    explicitCategories.length >= 2 ||
+    /\\b(?:and|plus|also|along with|as well as|together with|alongside)\\b|&|,\\s*(?=[a-z])/i.test(query);
 
   if (!hasMultipleItems) {
     return [];
@@ -484,18 +561,18 @@ Rules:
 2. Write a focused Google Shopping search query for that product type only.
 3. Put a separately stated maximum budget for a product type in that intent's
    budget field, in rupees. Leave it out when none is stated for that type.
-4. Set budgetScope to "per_product" only when the user clearly says the same
-   maximum applies to EACH product, or gives separate budgets by product type.
-5. Set budgetScope to "combined" when the user explicitly says the amount is a
-   total/combined budget for all requested products.
-6. Set budgetScope to "ambiguous" when one budget is mentioned for multiple
-   product types without clarifying whether it is per product or combined.
+4. Set budgetScope to "per_product" when a shared maximum is intended for each
+   requested product, or when separate maximums are given by product type.
+5. Set budgetScope to "combined" only when the user explicitly says the amount
+   is a total/combined budget for all requested products.
+6. Set budgetScope to "ambiguous" only when the wording truly cannot establish
+   whether the amount is per product or combined.
 7. Set budgetScope to "none" when no budget is specified.
-8. Never silently divide a combined budget or treat an ambiguous total as a
-   per-product budget. The application will ask the user to clarify.
+8. Never silently divide a combined budget. The application will ask the user
+   to clarify an explicitly combined total.
 9. Do not include the other requested product types in an intent's query.
-10. Return at most 3 intents. If this is really one product type, return an
-    empty intents array.
+10. Return at most ${MAX_MULTI_SEARCH_INTENTS} intents. If this is really one
+    product type, return an empty intents array.
 `,
       config: {
         responseMimeType: "application/json",
@@ -532,19 +609,15 @@ Rules:
     const budgetScope = budgetScopes.includes(parsed.budgetScope)
       ? parsed.budgetScope
       : "none";
+    const parsedIntents = [];
     const seen = new Set();
-    const intents = [];
 
     for (const item of Array.isArray(parsed.intents) ? parsed.intents : []) {
       const category = typeof item.category === "string" ? item.category : "";
       const searchQuery =
         typeof item.query === "string" ? item.query.trim().slice(0, MAX_QUERY_LENGTH) : "";
 
-      if (
-        !allowedCategories.includes(category) ||
-        !searchQuery ||
-        seen.has(category)
-      ) {
+      if (!allowedCategories.includes(category) || !searchQuery || seen.has(category)) {
         continue;
       }
 
@@ -553,21 +626,46 @@ Rules:
         item.budget > 0 && item.budget <= 100000000
         ? item.budget
         : null;
-      intents.push({ category, query: searchQuery, budget: itemBudget, budgetScope });
+      parsedIntents.push({ category, query: searchQuery, budget: itemBudget, budgetScope });
 
-      if (intents.length >= 3) {
+      if (parsedIntents.length >= MAX_MULTI_SEARCH_INTENTS) {
         break;
       }
     }
 
-    return intents.length >= 2 ? intents : [];
+    // When the shopper explicitly names common product types, that list is
+    // authoritative. Gemini may omit a fourth item or misread "mobile" as a
+    // tablet; use a focused query only when Gemini identified the exact category.
+    if (explicitCategories.length >= 2) {
+      return explicitCategories.map((category) => {
+        const parsedItem = parsedIntents.find((item) => item.category === category);
+        return {
+          category,
+          query: parsedItem?.query || CATEGORY_QUERIES[category] || category.toLowerCase(),
+          budget: parsedItem?.budget ?? null,
+          budgetScope
+        };
+      });
+    }
+
+    return parsedIntents.length >= 2 ? parsedIntents : [];
   } catch (error) {
     console.log("Intent Detection Error:", error.message);
-    return [];
+
+    // Preserve an explicit multi-category request even when the intent model
+    // is temporarily unavailable; each category still has a safe search query.
+    return explicitCategories.length >= 2
+      ? explicitCategories.map((category) => ({
+          category,
+          query: CATEGORY_QUERIES[category] || category.toLowerCase(),
+          budget: null,
+          budgetScope: "none"
+        }))
+      : [];
   }
 }
 
-async function pickWithGemini(userQuery, budget, listings, limit = 6) {
+async function pickWithGemini(userQuery, budget, listings, limit = 6, expectedCategory = null) {
   const safeLimit = Number.isInteger(limit) ? Math.min(6, Math.max(1, limit)) : 6;
   const candidates = listings.map((item, index) => ({
     index,
@@ -584,6 +682,8 @@ You are SmartBuy AI, a shopping assistant for customers in India.
 
 User request:
 ${userQuery}
+
+${expectedCategory ? `Requested product category: ${expectedCategory}. Only choose products that clearly belong to this category.` : ""}
 
 ${budget ? `Budget: up to ₹${budget}` : "Budget: not specified"}
 
@@ -651,13 +751,12 @@ Rules:
     .map((pick) => ({
       ...listings[pick.index],
       reason: pick.reason
-    }));
+    }))
+    .filter((product) => !expectedCategory || isProductInCategory(expectedCategory, product));
 
   return {
     reply: aiData.reply,
-    category: CATEGORIES.includes(aiData.category)
-      ? aiData.category
-      : "Other",
+    category: expectedCategory || (CATEGORIES.includes(aiData.category) ? aiData.category : "Other"),
     results
   };
 }
@@ -978,7 +1077,7 @@ async function compareProducts(products) {
 // Runs one AI search. Returns { status, payload }.
 async function runSearch(query) {
   // Version the answer cache so pre-fix single-category responses are not reused.
-  const answerKey = cacheKey("answer-v2", query);
+  const answerKey = cacheKey("answer-v3", query);
   const cachedAnswer = await getCached(answerKey);
 
   if (cachedAnswer) {
@@ -989,7 +1088,7 @@ async function runSearch(query) {
   const intents = await detectSearchIntents(query);
 
   if (intents.length >= 2) {
-    return runMultiProductSearch(budget, intents, answerKey);
+    return runMultiProductSearch(query, budget, intents, answerKey);
   }
 
   let listings;
@@ -1065,11 +1164,21 @@ async function runSearch(query) {
 
 // Runs separate shopping searches for each detected product type, then
 // combines the picks into the single result list expected by the chat UI.
-async function runMultiProductSearch(budget, intents, answerKey) {
+async function runMultiProductSearch(query, budget, intents, answerKey) {
   const detectedScope = intents[0]?.budgetScope;
-  const budgetScope = detectedScope && detectedScope !== "none"
-    ? detectedScope
-    : budget ? "ambiguous" : "none";
+  const hasCategoryBudgets = intents.some((intent) => intent.budget !== null);
+  // A single "under ₹X" cap in a multi-item shopping request is treated as
+  // a cap for EACH requested product. Ask for clarification only when the
+  // shopper explicitly describes one combined/overall purchase budget.
+  const budgetScope = hasExplicitCombinedBudget(query)
+    ? "combined"
+    : budget
+      ? "per_product"
+      : hasCategoryBudgets
+        ? "per_product"
+        : detectedScope && detectedScope !== "none" && detectedScope !== "ambiguous"
+          ? detectedScope
+          : "none";
 
   if (["combined", "ambiguous"].includes(budgetScope) &&
       (budget || intents.some((intent) => intent.budget))) {
@@ -1094,7 +1203,7 @@ async function runMultiProductSearch(budget, intents, answerKey) {
     };
   }
 
-  const perIntentLimit = Math.max(1, Math.floor(6 / intents.length));
+  const perIntentLimit = Math.max(1, Math.floor(MAX_MULTI_SEARCH_RESULTS / intents.length));
 
   const groups = await Promise.all(
     intents.map(async (intent) => {
@@ -1102,6 +1211,7 @@ async function runMultiProductSearch(budget, intents, answerKey) {
         const intentBudget = intent.budget ??
           (budgetScope === "per_product" ? budget : null);
         let listings = await searchShopping(intent.query);
+        listings = listings.filter((product) => isProductInCategory(intent.category, product));
 
         if (intentBudget) {
           listings = listings.filter((item) => item.price <= intentBudget);
@@ -1120,7 +1230,8 @@ async function runMultiProductSearch(budget, intents, answerKey) {
             intent.query,
             intentBudget,
             listings,
-            perIntentLimit
+            perIntentLimit,
+            intent.category
           );
         } catch (error) {
           console.log("Gemini Error (" + intent.category + "):", error.message);
