@@ -22,8 +22,8 @@
   inset: 0;
   background:
     radial-gradient(circle at 15% 20%, rgba(20, 43, 77, 0.55), transparent 45%),
-    radial-gradient(circle at 85% 75%, rgba(13, 148, 136, 0.4), transparent 45%),
-    radial-gradient(circle at 60% 40%, rgba(13, 148, 136, 0.35), transparent 50%);
+    radial-gradient(circle at 85% 75%, rgba(56, 189, 248, 0.4), transparent 45%),
+    radial-gradient(circle at 60% 40%, rgba(56, 189, 248, 0.35), transparent 50%);
 }
 
 .auth-brand-glow::after {
