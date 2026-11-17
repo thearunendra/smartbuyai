@@ -16,7 +16,7 @@ const {
 } = require("./auth");
 const { chatsRouter, saveExchange } = require("./chats");
 const { wishlistRouter } = require("./wishlist");
-const { applySecurity, searchLimiter } = require("./security");
+const { applySecurity, searchLimiter, guestSearchLimiter } = require("./security");
 const { trustedStoreFromUrl } = require("./merchant-urls");
 
 const app = express();
@@ -1470,6 +1470,43 @@ async function runMultiProductSearch(query, budget, intents, answerKey) {
 
   return { status: 200, payload };
 }
+
+// Anonymous visitors get two trial searches per IP per day.
+// Guest searches use the same product engine but are not stored in chat history.
+app.post("/api/search/guest", guestSearchLimiter, async (req, res) => {
+  const query =
+    typeof req.body.query === "string"
+      ? req.body.query.trim()
+      : "";
+
+  if (!query) {
+    return res.status(400).json({
+      message: "Please enter a search query.",
+      count: 0,
+      results: []
+    });
+  }
+
+  if (query.length > MAX_QUERY_LENGTH) {
+    return res.status(400).json({
+      message: `Please keep your search under ${MAX_QUERY_LENGTH} characters.`,
+      count: 0,
+      results: []
+    });
+  }
+
+  try {
+    const { status, payload } = await runSearch(query);
+    res.status(status).json(payload);
+  } catch (error) {
+    console.error("Guest Search Error:", error.message);
+    res.status(502).json({
+      message: "Unable to complete your trial search right now. Please try again.",
+      count: 0,
+      results: []
+    });
+  }
+});
 
 // Signed-in users only: every chat is saved to the user's history.
 app.post("/api/search", requireDB, optionalAuth, requireAuth, searchLimiter, async (req, res) => {
