@@ -253,6 +253,19 @@ function findExplicitProductCategories(query) {
 
       while ((match = expression.exec(text)) !== null) {
         const start = match.index + match[1].length;
+        const before = text.slice(0, start);
+        const separators = [...before.matchAll(/,|&|\\b(?:and|plus|also|along with|as well as|together with)\\b/gi)];
+        const segmentStart = separators.length
+          ? separators[separators.length - 1].index + separators[separators.length - 1][0].length
+          : 0;
+        const currentSegment = before.slice(segmentStart);
+
+        // Do not turn a product feature into another shopping intent:
+        // "phone with a good camera" is one smartphone request, while
+        // "phone and camera" is two requested product types.
+        const featureMention = /\\b(?:with|having|has|featuring|includes?)\\s+(?:(?:a|an|the|good|great|better|excellent|decent|high[- ]quality|quality|built[- ]in|integrated)\\s+){0,3}$/i.test(currentSegment);
+        if (featureMention) continue;
+
         matches.push({ category, start, end: start + match[2].length });
       }
     }
