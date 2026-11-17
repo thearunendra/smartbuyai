@@ -101,6 +101,15 @@ describe('access', () => {
 })
 
 describe('asking', () => {
+  test('shows the upgraded assistant workspace header and welcome prompts', () => {
+    renderChat()
+
+    expect(screen.getByRole('banner')).toHaveTextContent('SmartBuy AI Assistant')
+    expect(screen.getByText('SMARTER SHOPPING STARTS HERE')).toBeInTheDocument()
+    expect(screen.getByText('Try a shopping prompt')).toBeInTheDocument()
+    expect(screen.getByText('Compare options')).toBeInTheDocument()
+  })
+
   test('shows the welcome screen and answers a suggestion', async () => {
     renderChat()
 
