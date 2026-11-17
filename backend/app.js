@@ -133,12 +133,14 @@ const CATEGORY_QUERIES = {
 // Categories Gemini can assign to a chat search (used in admin stats).
 const CATEGORIES = [...Object.keys(CATEGORY_QUERIES), "Other"];
 
+const CATEGORIES = [...Object.keys(CATEGORY_QUERIES), "Other"];
+
 const MAX_MULTI_SEARCH_INTENTS = 6;
 const MAX_MULTI_SEARCH_RESULTS = 8;
 
 // Explicit aliases keep common shopping types deterministic. In particular,
-// "mobile" must mean Smartphones, not Tablets, and four requested types must
-// not be silently truncated to three by the language model.
+// "mobile" means Smartphones, not Tablets, and four requested types are not
+// silently truncated to three by the language model.
 const EXPLICIT_CATEGORY_ALIASES = {
   Laptops: ["laptop", "laptops", "notebook", "notebooks", "macbook", "chromebook", "ultrabook"],
   Smartphones: ["smartphone", "smartphones", "mobile phone", "mobile phones", "mobile", "mobiles", "cell phone", "cell phones", "phone", "phones", "iphone", "android phone"],
@@ -153,18 +155,18 @@ const EXPLICIT_CATEGORY_ALIASES = {
 };
 
 const CATEGORY_PRODUCT_MATCHERS = {
-  Laptops: /\\b(laptop|notebook|macbook|chromebook|ultrabook|thinkpad|ideapad|vivobook|zenbook|pavilion|inspiron|aspire|swift|tuf|rog|predator|legion|loq|latitude|elitebook|probook|envy|spectre|omen|victus|yoga|gram|matebook|nitro|travelmate)\\b/i,
-  Smartphones: /\\b(smartphone|mobile|cell phone|iphone|redmi|poco|oneplus|realme|samsung galaxy|galaxy [a-z0-9]+|google pixel|pixel [0-9]|vivo|oppo|iqoo|motorola|nothing phone|infinix|tecno|nokia|lava|honor)\\b/i,
-  Tablets: /\\b(tablet|ipad|galaxy tab|redmi pad|realme pad|oneplus pad|lenovo tab|idea tab|xiaomi pad|fire hd|omnipad)\\b/i,
-  Drones: /\\b(drone|quadcopter|mavic|phantom|avata|fpv|dji mini(?:\\s+\\d)?|dji air(?:\\s+\\d)?|autel evo)\\b/i,
-  Televisions: /\\b(tv|television|bravia|qled|oled tv|webos|tizen|google tv|android tv|crystal uhd|qned)\\b/i
+  Laptops: /\b(laptop|notebook|macbook|chromebook|ultrabook|thinkpad|ideapad|vivobook|zenbook|pavilion|inspiron|aspire|swift|tuf|rog|predator|legion|loq|latitude|elitebook|probook|envy|spectre|omen|victus|yoga|gram|matebook|nitro|travelmate)\b/i,
+  Smartphones: /\b(smartphone|mobile|cell phone|iphone|redmi|poco|oneplus|realme|samsung galaxy|galaxy [a-z0-9]+|google pixel|pixel [0-9]|vivo|oppo|iqoo|motorola|nothing phone|infinix|tecno|nokia|lava|honor)\b/i,
+  Tablets: /\b(tablet|ipad|galaxy tab|redmi pad|realme pad|oneplus pad|lenovo tab|idea tab|xiaomi pad|fire hd|omnipad)\b/i,
+  Drones: /\b(drone|quadcopter|mavic|phantom|avata|fpv|dji mini(?:\s+\d)?|dji air(?:\s+\d)?|autel evo)\b/i,
+  Televisions: /\b(tv|television|bravia|qled|oled tv|webos|tizen|google tv|android tv|crystal uhd|qned)\b/i
 };
 
 function phrasePosition(text, phrase) {
-  const escaped = phrase
-    .replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\const CATEGORIES = [...Object.keys(CATEGORY_QUERIES), "Other"];")
-    .replace(/\\s+/g, "\\\\s+");
-  const match = new RegExp(`(^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, "i").exec(text);
+  // Aliases contain only words/spaces, so whitespace normalisation is enough.
+  const escaped = phrase.trim().replace(/\s+/g, "\\s+");
+  const pattern = "(^|[^a-z0-9])" + escaped + "(?=$|[^a-z0-9])";
+  const match = new RegExp(pattern, "i").exec(text);
   return match ? match.index + match[1].length : -1;
 }
 
@@ -183,7 +185,7 @@ function findExplicitProductCategories(query) {
   }
 
   // "Camera drone" is one product type, not a separate camera + drone request.
-  if (/\\bcamera\\s+drone\\b/i.test(text)) {
+  if (/\bcamera\s+drone\b/i.test(text)) {
     const cameraIndex = found.findIndex((item) => item.category === "Cameras");
     if (cameraIndex >= 0) found.splice(cameraIndex, 1);
   }
@@ -202,9 +204,9 @@ function isProductInCategory(category, product) {
 function hasExplicitCombinedBudget(query) {
   const text = String(query || "").toLowerCase();
   return (
-    /\\b(?:total|combined|overall)\\s+(?:purchase\\s+)?budget\\b/.test(text) ||
-    /\\b(?:all together|altogether|for all (?:the )?(?:products|items|categories))\\b/.test(text) ||
-    /\\b(?:budget|spend)\\b.{0,40}\\b(?:combined|total|altogether|all together)\\b/.test(text)
+    /\b(?:total|combined|overall)\s+(?:purchase\s+)?budget\b/.test(text) ||
+    /\b(?:all together|altogether|for all (?:the )?(?:products|items|categories))\b/.test(text) ||
+    /\b(?:budget|spend)\b.{0,40}\b(?:combined|total|altogether|all together)\b/.test(text)
   );
 }
 
