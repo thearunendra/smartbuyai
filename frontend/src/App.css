@@ -3,24 +3,24 @@
    ===================================================== */
 
 :root {
-  --bg: #f7f5f0;
-  --bg-subtle: #f0ece4;
-  --surface: #fffefa;
-  --surface-2: #faf8f3;
-  --border: #e8e1d7;
-  --border-strong: #d3c8b8;
+  --bg: #F5F9FC;
+  --bg-subtle: #EFF6FC;
+  --surface: #FFFFFF;
+  --surface-2: #F8FBFE;
+  --border: #E2EAF2;
+  --border-strong: #C8D8E8;
 
-  --text: #17283c;
-  --text-muted: #626f80;
-  --text-subtle: #8993a0;
+  --text: #14263D;
+  --text-muted: #56697D;
+  --text-subtle: #8497AA;
 
-  --primary: #14263d;
-  --primary-hover: #0d1d30;
-  --primary-soft: #f2ecdf;
+  --primary: #14263D;
+  --primary-hover: #0D1D30;
+  --primary-soft: #EAF5FD;
   --primary-text: #ffffff;
-  --accent: #92744c;
-  --accent-soft: #f2ecdf;
-  --gradient: linear-gradient(135deg, #14263d 0%, #2d435b 100%);
+  --accent: #38BDF8;
+  --accent-soft: rgba(56, 189, 248, 0.14);
+  --gradient: linear-gradient(135deg, #14263D 0%, #245073 58%, #38BDF8 100%);
 
   --success: #16a34a;
   --success-soft: #ecfdf3;
@@ -49,23 +49,23 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0c1521;
-    --bg-subtle: #142235;
-    --surface: #18283a;
-    --surface-2: #1d3045;
-    --border: #2b3b4e;
-    --border-strong: #405268;
+    --bg: #0B1420;
+    --bg-subtle: #13243A;
+    --surface: #182B40;
+    --surface-2: #1D354D;
+    --border: #30475F;
+    --border-strong: #48647E;
 
-    --text: #f4f0e8;
-    --text-muted: #bac2cc;
-    --text-subtle: #8b97a6;
+    --text: #F4F8FC;
+    --text-muted: #B9C8D6;
+    --text-subtle: #8FA4B8;
 
-    --primary: #d2b889;
-    --primary-hover: #e0c99e;
-    --primary-soft: rgba(210, 184, 137, 0.14);
-    --primary-text: #14263d;
-    --accent: #d2b889;
-    --accent-soft: rgba(210, 184, 137, 0.14);
+    --primary: #38BDF8;
+    --primary-hover: #7DD3FC;
+    --primary-soft: rgba(56, 189, 248, 0.14);
+    --primary-text: #14263D;
+    --accent: #7DD3FC;
+    --accent-soft: rgba(56, 189, 248, 0.14);
 
     --success: #4ade80;
     --success-soft: rgba(74, 222, 128, 0.1);
@@ -86,21 +86,21 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #0c1521;
-  --bg-subtle: #142235;
-  --surface: #18283a;
-  --surface-2: #1d3045;
-  --border: #2b3b4e;
-  --border-strong: #405268;
+  --bg: #0B1420;
+  --bg-subtle: #13243A;
+  --surface: #182B40;
+  --surface-2: #1D354D;
+  --border: #30475F;
+  --border-strong: #48647E;
 
-  --text: #f4f0e8;
-  --text-muted: #bac2cc;
-  --text-subtle: #8b97a6;
+  --text: #F4F8FC;
+  --text-muted: #B9C8D6;
+  --text-subtle: #8FA4B8;
 
-  --primary: #d2b889;
-  --primary-hover: #e0c99e;
-  --primary-soft: rgba(210, 184, 137, 0.14);
-  --primary-text: #14263d;
+  --primary: #7DD3FC;
+  --primary-hover: #BAE6FD;
+  --primary-soft: rgba(56, 189, 248, 0.14);
+  --primary-text: #14263D;
 
   --success: #4ade80;
   --success-soft: rgba(74, 222, 128, 0.1);
@@ -225,7 +225,7 @@ button {
 .btn-primary {
   background: var(--primary);
   color: var(--primary-text);
-  box-shadow: 0 6px 18px rgba(183, 154, 108, 0.22);
+  box-shadow: 0 6px 18px rgba(56, 189, 248, 0.22);
 }
 
 .btn-primary:hover:not(:disabled) {
