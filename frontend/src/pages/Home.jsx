@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -6,6 +6,8 @@ import {
   BadgeCheck,
   Bot,
   Check,
+  Mic,
+  MicOff,
   Search,
   Sparkles,
   Store,
@@ -67,6 +69,11 @@ const features = [
 function Home() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [voiceMessage, setVoiceMessage] = useState("");
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef(null);
+
+  useEffect(() => () => recognitionRef.current?.stop?.(), []);
 
   const ask = (text) => {
     const value = text.trim();
@@ -74,6 +81,56 @@ function Home() {
     if (value) {
       navigate(`/chatbot?q=${encodeURIComponent(value)}`);
     }
+  };
+
+  const startVoiceSearch = () => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceMessage("Voice search is not supported in this browser. Try Chrome or Edge.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.lang = window.navigator.language || "en-IN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setListening(true);
+        setVoiceMessage("Listening… say what you want to find.");
+      };
+
+      recognition.onresult = (event) => {
+        const transcript = event.results?.[0]?.[0]?.transcript?.trim();
+        if (transcript) {
+          setQuery(transcript);
+          setVoiceMessage("Voice input added. Press Ask AI to search.");
+        }
+      };
+
+      recognition.onerror = (event) => {
+        setVoiceMessage(
+          event.error === "not-allowed"
+            ? "Microphone permission was blocked. Allow microphone access and try again."
+            : "We could not capture your voice. Please try again."
+        );
+      };
+
+      recognition.onend = () => setListening(false);
+      recognition.start();
+    } catch {
+      setListening(false);
+      setVoiceMessage("Voice search could not start. Please try again.");
+    }
+  };
+
+  const stopVoiceSearch = () => {
+    recognitionRef.current?.stop?.();
+    setListening(false);
   };
 
   const totalCategories = CATEGORIES.length;
@@ -128,10 +185,26 @@ function Home() {
                   maxLength={200}
                 />
 
+                <button
+                  className={`hero-voice-btn${listening ? " is-listening" : ""}`}
+                  type="button"
+                  onClick={listening ? stopVoiceSearch : startVoiceSearch}
+                  aria-label={listening ? "Stop voice search" : "Search by voice"}
+                  title={listening ? "Stop voice search" : "Search by voice"}
+                >
+                  {listening ? <MicOff size={18} /> : <Mic size={18} />}
+                </button>
+
                 <button type="submit" className="btn btn-primary">
                   Ask AI <ArrowRight size={16} />
                 </button>
               </form>
+
+              {voiceMessage && (
+                <p className="hero-voice-feedback" role="status" aria-live="polite">
+                  {voiceMessage}
+                </p>
+              )}
 
               <div className="hero-search-hint">
                 <span><Check size={13} /> Plain language works</span>
