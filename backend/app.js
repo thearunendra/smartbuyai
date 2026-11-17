@@ -655,49 +655,37 @@ async function detectSearchIntents(query) {
   const explicitCategories = findExplicitProductCategories(query);
   const hasMultipleItems =
     explicitCategories.length >= 2 ||
-    /\\b(?:and|plus|also|along with|as well as|together with|alongside)\\b|&|,\\s*(?=[a-z])/i.test(query);
+    /\b(?:and|plus|also|along with|as well as|together with|alongside)\b|&|,\s*(?=[a-z])/i.test(query);
 
   if (!hasMultipleItems) {
     return [];
   }
 
   const allowedCategories = CATEGORIES.filter((category) => category !== "Other");
+  const intentPrompt = [
+    "You are SmartBuy AI's product-intent planner for shopping in India.",
+    "",
+    "Extract EVERY distinct product type the shopper actually wants. Do not omit later items just because the list is long.",
+    "User request:",
+    query,
+    "",
+    "Allowed product types (use exact category spelling):",
+    allowedCategories.join(", "),
+    "",
+    "Rules:",
+    "1. Return one intent per distinct requested product type, up to 10 intents, preserving request order.",
+    "2. Map chair/office chair to Office Chairs; fridge to Refrigerators; mobile/phone to Smartphones; couch to Sofas; desk/study desk to Study Tables; AC to Air Conditioners.",
+    "3. Do not split features of one product. A phone with a good camera and 5G is one Smartphones intent.",
+    "4. Each query must search only for that one product type and preserve the requested model, feature or brand.",
+    "5. A shared under-₹X cap applies to each product unless the user explicitly says total/combined budget.",
+    "6. Set budgetScope to combined only for an explicit overall basket budget; otherwise use per_product for per-item caps or none.",
+    "7. Do not invent unrequested product types.",
+    "8. Return an empty intents array only when the request is clearly for one product type."
+  ].join("\n");
 
   try {
     const response = await generate({
-      contents: `
-You are a shopping request parser for an Indian shopping assistant.
-
-Find the distinct product types the user wants to shop for.
-Only return multiple intents when the user clearly asks for two or more
-different product types. Do not split one product request because it has
-multiple features, such as "a phone with a good camera and 5G".
-
-User request:
-${query}
-
-Allowed product categories:
-${allowedCategories.join(", ")}
-
-Rules:
-1. Return one intent for each distinct product type, with its exact category
-   from the allowed categories above.
-2. Write a focused Google Shopping search query for that product type only.
-3. Put a separately stated maximum budget for a product type in that intent's
-   budget field, in rupees. Leave it out when none is stated for that type.
-4. Set budgetScope to "per_product" when a shared maximum is intended for each
-   requested product, or when separate maximums are given by product type.
-5. Set budgetScope to "combined" only when the user explicitly says the amount
-   is a total/combined budget for all requested products.
-6. Set budgetScope to "ambiguous" only when the wording truly cannot establish
-   whether the amount is per product or combined.
-7. Set budgetScope to "none" when no budget is specified.
-8. Never silently divide a combined budget. The application will ask the user
-   to clarify an explicitly combined total.
-9. Do not include the other requested product types in an intent's query.
-10. Return at most ${MAX_MULTI_SEARCH_INTENTS} intents. If this is really one
-    product type, return an empty intents array.
-`,
+      contents: intentPrompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -709,6 +697,7 @@ Rules:
             },
             intents: {
               type: "array",
+              maxItems: 10,
               items: {
                 type: "object",
                 properties: {
@@ -734,52 +723,62 @@ Rules:
       ? parsed.budgetScope
       : "none";
     const parsedIntents = [];
-    const seen = new Set();
+    const seenParsed = new Set();
 
     for (const item of Array.isArray(parsed.intents) ? parsed.intents : []) {
       const category = typeof item.category === "string" ? item.category : "";
       const searchQuery =
-        typeof item.query === "string" ? item.query.trim().slice(0, MAX_QUERY_LENGTH) : "";
+        typeof item.query === "string"
+          ? item.query.trim().slice(0, MAX_QUERY_LENGTH)
+          : "";
 
-      if (!allowedCategories.includes(category) || !searchQuery || seen.has(category)) {
+      if (!allowedCategories.includes(category) || !searchQuery || seenParsed.has(category)) {
         continue;
       }
 
-      seen.add(category);
+      seenParsed.add(category);
       const itemBudget = Number.isSafeInteger(item.budget) &&
         item.budget > 0 && item.budget <= 100000000
         ? item.budget
         : null;
       parsedIntents.push({ category, query: searchQuery, budget: itemBudget, budgetScope });
 
-      if (parsedIntents.length >= MAX_MULTI_SEARCH_INTENTS) {
-        break;
-      }
+      if (parsedIntents.length >= MAX_MULTI_SEARCH_INTENTS) break;
     }
 
-    // When the shopper explicitly names common product types, that list is
-    // authoritative. Gemini may omit a fourth item or misread "mobile" as a
-    // tablet; use a focused query only when Gemini identified the exact category.
-    if (explicitCategories.length >= 2) {
-      return explicitCategories.map((category) => {
-        const parsedItem = parsedIntents.find((item) => item.category === category);
-        return {
-          category,
-          query: parsedItem?.query || CATEGORY_QUERIES[category] || category.toLowerCase(),
-          budget: parsedItem?.budget ?? null,
-          budgetScope
-        };
+    // Explicit aliases cannot be omitted or misclassified by Gemini. Merge
+    // model-discovered catalogue types after explicit matches, so less-common
+    // product wording can still be recovered by the planner.
+    const merged = [];
+    const seen = new Set();
+
+    for (const category of explicitCategories) {
+      const parsedItem = parsedIntents.find((item) => item.category === category);
+      merged.push({
+        category,
+        query: parsedItem?.query || CATEGORY_QUERIES[category] || category.toLowerCase(),
+        budget: parsedItem?.budget ?? null,
+        budgetScope
       });
+      seen.add(category);
     }
 
-    return parsedIntents.length >= 2 ? parsedIntents : [];
+    for (const item of parsedIntents) {
+      if (seen.has(item.category)) continue;
+      merged.push(item);
+      seen.add(item.category);
+      if (merged.length >= MAX_MULTI_SEARCH_INTENTS) break;
+    }
+
+    return merged.length >= 2
+      ? merged.slice(0, MAX_MULTI_SEARCH_INTENTS)
+      : [];
   } catch (error) {
     console.log("Intent Detection Error:", error.message);
 
-    // Preserve an explicit multi-category request even when the intent model
-    // is temporarily unavailable; each category still has a safe search query.
+    // Explicit multi-category requests still work if the intent model is down.
     return explicitCategories.length >= 2
-      ? explicitCategories.map((category) => ({
+      ? explicitCategories.slice(0, MAX_MULTI_SEARCH_INTENTS).map((category) => ({
           category,
           query: CATEGORY_QUERIES[category] || category.toLowerCase(),
           budget: null,
