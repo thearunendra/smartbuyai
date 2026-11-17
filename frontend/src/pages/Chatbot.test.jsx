@@ -33,7 +33,7 @@ function mockApi() {
       return { chats: chatList }
     }
 
-    if (path === '/api/search') {
+    if (path === '/api/search' || path === '/api/search/guest') {
       if (searchReply instanceof Error) throw searchReply
       return typeof searchReply === 'function' ? searchReply(options.body) : searchReply
     }
@@ -92,11 +92,19 @@ describe('access', () => {
     expect(screen.queryByPlaceholderText(/Gaming laptop/)).not.toBeInTheDocument()
   })
 
-  test('guests are sent to sign in and back', () => {
+  test('guests can open a fresh trial chat without signing in', () => {
     useAuth.mockReturnValue({ user: null, checking: false })
     renderChat('/chatbot?q=tv')
 
-    expect(screen.getByTestId('path')).toHaveTextContent('/login?next=%2Fchatbot%3Fq%3Dtv')
+    expect(screen.getByRole('heading', { name: 'What are you shopping for?' })).toBeInTheDocument()
+    expect(screen.getByTestId('path')).toHaveTextContent('/chatbot')
+  })
+
+  test('guests must sign in to open a saved conversation', () => {
+    useAuth.mockReturnValue({ user: null, checking: false })
+    renderChat('/chatbot/c1')
+
+    expect(screen.getByTestId('path')).toHaveTextContent('/login?next=%2Fchatbot%2Fc1')
   })
 })
 
@@ -108,6 +116,20 @@ describe('asking', () => {
     expect(screen.getByText('SMARTER SHOPPING STARTS HERE')).toBeInTheDocument()
     expect(screen.getByText('Try a shopping prompt')).toBeInTheDocument()
     expect(screen.getByText('Compare options')).toBeInTheDocument()
+  })
+
+  test('guest searches use the limited trial endpoint and are not saved', async () => {
+    useAuth.mockReturnValue({ user: null, checking: false })
+    renderChat()
+    ask('phone under 20000')
+
+    expect(await screen.findByText('Try these.')).toBeInTheDocument()
+    expect(api).toHaveBeenCalledWith('/api/search/guest', {
+      method: 'POST',
+      body: { query: 'phone under 20000' }
+    })
+    expect(screen.getByTestId('path')).toHaveTextContent(/^\/chatbot$/)
+    expect(api).not.toHaveBeenCalledWith('/api/chats', expect.anything())
   })
 
   test('shows the welcome screen and answers a suggestion', async () => {
