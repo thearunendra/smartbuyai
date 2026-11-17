@@ -152,7 +152,7 @@ const EXTRA_CATEGORY_ALIASES = {
   Headphones: ["headphone", "headset", "headsets", "over ear headphones", "wireless headphones"],
   Earbuds: ["earbud", "airpods", "tws", "wireless earbuds", "bluetooth earbuds"],
   Speakers: ["speaker", "bluetooth speaker", "soundbar", "sound bars"],
-  Smartwatches: ["smart watch", "fitness watch"],
+  Smartwatches: ["smartwatch", "smart watch", "fitness watch"],
   Cameras: ["dslr", "mirrorless camera", "digital camera", "action camera", "webcam"],
   Gaming: ["game console", "gaming console", "playstation", "ps5", "ps4", "xbox", "nintendo switch"],
   Printers: ["printer", "ink tank printer", "laser printer"],
@@ -2390,6 +2390,9 @@ module.exports = {
   // Internals, exported for the white-box tests.
   internals: {
     CATEGORIES,
+    findExplicitProductCategories,
+    detectSearchIntents,
+    mapWithConcurrency,
     generate,
     toRupees,
     extractBudget,
