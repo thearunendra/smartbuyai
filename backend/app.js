@@ -154,7 +154,7 @@ const EXPLICIT_CATEGORY_ALIASES = {
 
 const CATEGORY_PRODUCT_MATCHERS = {
   Laptops: /\b(laptop|notebook|macbook|chromebook|ultrabook|thinkpad|ideapad|vivobook|zenbook|pavilion|inspiron|aspire|swift|tuf|rog|predator|legion|loq|latitude|elitebook|probook|envy|spectre|omen|victus|yoga|gram|matebook|nitro|travelmate)\b/i,
-  Smartphones: /\b(smartphone|mobile|cell phone|iphone|redmi|poco|oneplus|realme|samsung galaxy|galaxy [a-z0-9]+|google pixel|pixel [0-9]|vivo|oppo|iqoo|motorola|nothing phone|infinix|tecno|nokia|lava|honor)\b/i,
+  Smartphones: /\b(smartphone|mobile|phone|cell phone|iphone|redmi|poco|oneplus|realme|samsung galaxy|galaxy [a-z0-9]+|google pixel|pixel [0-9]|vivo|oppo|iqoo|motorola|nothing phone|infinix|tecno|nokia|lava|honor)\b/i,
   Tablets: /\b(tablet|ipad|galaxy tab|redmi pad|realme pad|oneplus pad|lenovo tab|idea tab|xiaomi pad|fire hd|omnipad)\b/i,
   Drones: /\b(drone|quadcopter|mavic|phantom|avata|fpv|dji mini(?:\s+\d)?|dji air(?:\s+\d)?|autel evo)\b/i,
   Televisions: /\b(tv|television|bravia|qled|oled tv|webos|tizen|google tv|android tv|crystal uhd|qned)\b/i
@@ -635,13 +635,13 @@ Rules:
 
     // When the shopper explicitly names common product types, that list is
     // authoritative. Gemini may omit a fourth item or misread "mobile" as a
-    // tablet; use the canonical category query for every explicitly named type.
+    // tablet; use a focused query only when Gemini identified the exact category.
     if (explicitCategories.length >= 2) {
       return explicitCategories.map((category) => {
         const parsedItem = parsedIntents.find((item) => item.category === category);
         return {
           category,
-          query: CATEGORY_QUERIES[category] || parsedItem?.query || category.toLowerCase(),
+          query: parsedItem?.query || CATEGORY_QUERIES[category] || category.toLowerCase(),
           budget: parsedItem?.budget ?? null,
           budgetScope
         };
