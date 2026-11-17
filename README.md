@@ -92,21 +92,39 @@ Sign in at `/admin-login`.
 
 ## Deploy (Render)
 
+The repository includes a Render Blueprint in `render.yaml`.
+
 **Backend – Web Service**
 - Root directory: `backend`
-- Build command: `npm install`
+- Runtime: Node.js 20
+- Build command: `npm ci --omit=dev`
 - Start command: `npm start`
-- Environment: all backend variables above; set `CORS_ORIGINS` to the
-  frontend's URL.
+- Health check: `/api/health/ready`
+- Configure `GEMINI_API_KEY`, `SERPER_API_KEY`, optional `SERPER_API_KEY_2`,
+  `MONGODB_URI`, `JWT_SECRET`, and `CORS_ORIGINS`.
+- `MONGODB_DB` is optional; it defaults to `smartbuy`.
+- Configure the optional Upstash REST URL and token together to use the shared cache.
 
 **Frontend – Static Site**
 - Root directory: `frontend`
-- Build command: `npm install && npm run build`
+- Build command: `npm ci && npm run build`
 - Publish directory: `dist`
-- Environment: `VITE_API_URL` = the backend's URL
-- Rewrite rule: `/*` → `/index.html` (so page refreshes work with React Router)
+- Set `VITE_API_URL` to the public backend URL, for example
+  `https://your-backend-service.onrender.com`.
+- Rewrite `/*` to `/index.html` so React Router routes work on refresh.
 
-In MongoDB Atlas, allow network access from Render (e.g. `0.0.0.0/0`).
+**MongoDB Atlas network and database access**
+- In the Render backend service, open **Connect → Outbound** and copy every
+  IPv4 CIDR range displayed for the service's region.
+- Add those CIDR ranges to the Atlas project's **Security → Network Access**
+  IP Access List. Keep the ranges in sync if Render changes the service region
+  or its published outbound ranges.
+- Do **not** use `0.0.0.0/0` for production database access.
+- Use a dedicated application database user with the `readWrite` role on
+  `smartbuy` only. Do not put an `atlasAdmin` database user's credentials
+  in the backend's `MONGODB_URI`; reserve administrative access for operators.
+- Keep a separate backup and restore plan. Backup availability depends on the
+  Atlas cluster tier and the backup options enabled for the project.
 
 ## Limits to know
 
