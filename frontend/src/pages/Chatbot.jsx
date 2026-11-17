@@ -309,6 +309,20 @@ function Chatbot() {
           />
 
           <section className="chat-main">
+            <header className="chat-topbar">
+              <div className="chat-topbar-identity">
+                <span className="chat-topbar-mark"><Bot size={20} /></span>
+                <div>
+                  <strong>SmartBuy AI Assistant</strong>
+                  <span>Your personal product research companion</span>
+                </div>
+              </div>
+              <div className="chat-topbar-status">
+                <i aria-hidden="true" />
+                <span>READY TO HELP</span>
+              </div>
+            </header>
+
             <div className="chat-messages">
               {loadingChat && (
                 <div className="chat-loading" aria-label="Loading chat">
@@ -335,16 +349,28 @@ function Chatbot() {
               {showWelcome && (
                 <div className="chat-welcome">
                   <span className="welcome-icon">
-                    <Sparkles size={26} />
+                    <Sparkles size={27} />
                   </span>
 
+                  <span className="welcome-kicker">SMARTER SHOPPING STARTS HERE</span>
                   <h2>What are you shopping for?</h2>
 
                   <p>
-                    Describe the product, your budget and anything that
-                    matters to you. I'll pick the best options and compare
-                    prices across stores.
+                    Tell me what you need, how much you want to spend and
+                    which features matter. I'll help you explore matching
+                    products and compare available store offers.
                   </p>
+
+                  <div className="welcome-benefits" aria-label="What SmartBuy AI can help with">
+                    <span><strong>01</strong> Set your budget</span>
+                    <span><strong>02</strong> Share priorities</span>
+                    <span><strong>03</strong> Compare options</span>
+                  </div>
+
+                  <div className="welcome-suggestions-heading">
+                    <strong>Try a shopping prompt</strong>
+                    <span>Tap any idea to get started</span>
+                  </div>
 
                   <div className="welcome-suggestions">
                     {suggestions.map(({ icon: Icon, text }) => (
@@ -446,13 +472,14 @@ function Chatbot() {
               <div ref={bottomRef} />
             </div>
 
-            <form
-              className="chat-composer"
-              onSubmit={(e) => {
-                e.preventDefault();
-                searchProducts(message);
-              }}
-            >
+            <div className="chat-composer-area">
+              <form
+                className="chat-composer"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  searchProducts(message);
+                }}
+              >
               <button
                 type="button"
                 className="icon-btn composer-icon composer-history"
@@ -495,7 +522,11 @@ function Chatbot() {
               >
                 <SendHorizontal size={18} />
               </button>
-            </form>
+              </form>
+              <p className="chat-composer-note">
+                <span>↵</span> Enter to search <i /> Product availability and prices may change at the store
+              </p>
+            </div>
           </section>
         </div>
       </main>
