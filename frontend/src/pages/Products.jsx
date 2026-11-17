@@ -305,7 +305,7 @@ function Products() {
               </p>
               {!loading && result.checkedAt && (
                 <span className="prices-checked-at">
-                  Prices last checked {new Date(result.checkedAt).toLocaleString("en-IN", {
+                  Listings fetched {new Date(result.checkedAt).toLocaleString("en-IN", {
                     day: "2-digit", month: "short", year: "numeric",
                     hour: "2-digit", minute: "2-digit"
                   })}
