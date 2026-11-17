@@ -29,7 +29,7 @@ describe("POST /api/auth/login", () => {
     ["a wrong password", { email: "ravi@example.com", password: "wrong-pass" }],
     ["a non-string password", { email: "ravi@example.com", password: 12345678 }]
   ])("rejects %s", async (_, body) => {
-    const response = await request(app).post("/api/auth/login").send(body);
+    const response = await request(app).post("/api/auth/login").send(JSON.stringify(body));
 
     expect(response.status).toBe(401);
     expect(response.body.message).toBe("Invalid email or password.");
