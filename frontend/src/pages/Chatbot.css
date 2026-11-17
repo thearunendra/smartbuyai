@@ -226,7 +226,7 @@
   border-radius: 18px;
   background: var(--gradient);
   color: #ffffff;
-  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 12px 30px rgba(13, 148, 136, 0.22);
 }
 
 .chat-welcome h2 {
