@@ -181,6 +181,26 @@ describe("GET /api/products", () => {
     expect(response.body.products[0].name).toBe("Searched Sofa");
   });
 
+  test("limits product browsing to 10 searches per signed-in user per minute", async () => {
+    const { auth } = await newUser();
+    serper([shoppingItem("Rate Limited Browse Product", 20000)]);
+    geminiReply({ indexes: [0] });
+
+    for (let index = 0; index < 10; index += 1) {
+      const response = await request(app)
+        .get("/api/products?category=Smartphones")
+        .set(auth);
+      expect(response.status).toBe(200);
+    }
+
+    const blocked = await request(app)
+      .get("/api/products?category=Smartphones")
+      .set(auth);
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.body.message).toMatch(/searching too fast/i);
+  });
+
   test("502 when live listings can't be fetched", async () => {
     mockSerper(() => new Error("down"));
 
@@ -251,6 +271,16 @@ describe("product details routes", () => {
 describe("errors, CORS and health", () => {
   test("the health check reports the database", async () => {
     expect((await request(app).get("/api/health")).body).toEqual({ ok: true, database: "connected" });
+  });
+
+  test("liveness and readiness pass when the database is connected", async () => {
+    const live = await request(app).get("/api/health/live");
+    const ready = await request(app).get("/api/health/ready");
+
+    expect(live.status).toBe(200);
+    expect(live.body).toEqual({ ok: true });
+    expect(ready.status).toBe(200);
+    expect(ready.body).toEqual({ ok: true, database: "connected" });
   });
 
   test("invalid JSON answers 400", async () => {
