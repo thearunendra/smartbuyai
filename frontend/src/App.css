@@ -14,12 +14,12 @@
   --text-muted: #5b6477;
   --text-subtle: #8a93a6;
 
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-soft: #eef0ff;
+  --primary: #142b4d;
+  --primary-hover: #0f2340;
+  --primary-soft: #eaf1f7;
   --primary-text: #ffffff;
-  --accent: #06b6d4;
-  --gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #06b6d4 100%);
+  --accent: #0d9488;
+  --gradient: linear-gradient(135deg, #142b4d 0%, #0d9488 100%);
 
   --success: #16a34a;
   --success-soft: #ecfdf3;
@@ -59,9 +59,9 @@
     --text-muted: #a3abbe;
     --text-subtle: #717a90;
 
-    --primary: #818cf8;
-    --primary-hover: #a5b4fc;
-    --primary-soft: rgba(129, 140, 248, 0.14);
+    --primary: #0d9488;
+    --primary-hover: #14b8a6;
+    --primary-soft: rgba(13, 148, 136, 0.16);
     --primary-text: #0b0f19;
 
     --success: #4ade80;
@@ -222,7 +222,7 @@ button {
 .btn-primary {
   background: var(--primary);
   color: var(--primary-text);
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.28);
+  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.22);
 }
 
 .btn-primary:hover:not(:disabled) {
