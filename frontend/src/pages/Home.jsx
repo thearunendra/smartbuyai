@@ -6,20 +6,20 @@ import {
   BadgeCheck,
   Bot,
   Check,
+  Gamepad2,
+  House,
+  Laptop,
   Mic,
   MicOff,
   Search,
   Sparkles,
   Store,
-  TrendingDown,
+  Smartphone,
   Zap
 } from "lucide-react";
 import Navbar from "../components/Navbar";
 import { CATEGORIES, DEPARTMENTS } from "../data/categories";
 import "./Home.css";
-
-const multiSearchExample =
-  "show me chair, mobile, drone and fridge under 50000";
 
 const suggestions = [
   "Phone under ₹20,000 with good camera",
