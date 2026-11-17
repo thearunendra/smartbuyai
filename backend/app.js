@@ -1326,10 +1326,12 @@ async function runMultiProductSearch(query, budget, intents, answerKey) {
     };
   }
 
-  const perIntentLimit = Math.max(1, Math.floor(MAX_MULTI_SEARCH_RESULTS / intents.length));
+  const perIntentLimit = Math.max(1, Math.min(3, Math.floor(MAX_MULTI_SEARCH_RESULTS / intents.length)));
 
-  const groups = await Promise.all(
-    intents.map(async (intent) => {
+  const groups = await mapWithConcurrency(
+    intents,
+    MULTI_SEARCH_CONCURRENCY,
+    async (intent) => {
       try {
         const intentBudget = intent.budget ??
           (budgetScope === "per_product" ? budget : null);
@@ -1379,10 +1381,13 @@ async function runMultiProductSearch(query, budget, intents, answerKey) {
         console.log("Serper Error (" + intent.category + "):", error.message);
         return { intent, results: [], reply: "", failed: true };
       }
-    })
+    }
   );
 
   const groupsWithResults = groups.filter((group) => group.results.length > 0);
+  const missingCategories = groups
+    .filter((group) => group.results.length === 0)
+    .map((group) => group.intent.category);
 
   if (groupsWithResults.length === 0) {
     const allFailed = groups.every((group) => group.failed);
@@ -1398,6 +1403,7 @@ async function runMultiProductSearch(query, budget, intents, answerKey) {
           : "I couldn't find live listings for the requested products. Try a different search or budget.",
         category: "Other",
         categories: intents.map((intent) => intent.category),
+        missingCategories: intents.map((intent) => intent.category),
         count: 0,
         results: []
       }
@@ -1435,6 +1441,7 @@ async function runMultiProductSearch(query, budget, intents, answerKey) {
       ? groupsWithResults[0].intent.category
       : "Other",
     categories: intents.map((intent) => intent.category),
+    missingCategories,
     count: results.length,
     results
   };
