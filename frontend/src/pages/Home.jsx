@@ -42,27 +42,34 @@ const popularCategories = popularCategoryNames
   .map((name) => CATEGORIES.find((category) => category.name === name))
   .filter(Boolean);
 
-const features = [
+const shoppingIntents = [
   {
-    icon: Bot,
-    eyebrow: "01 · Tell us",
-    title: "Describe it your way",
-    text: "Mention your budget, must-have features or the exact model. No complicated filters.",
-    query: "I need a phone under ₹20,000 with a good camera"
+    icon: Laptop,
+    eyebrow: "WORK & STUDY",
+    title: "Build a productive setup",
+    text: "Find a laptop, monitor and everyday essentials that work well together.",
+    query: "Build a work and study setup under ₹80,000"
   },
   {
-    icon: Sparkles,
-    eyebrow: "02 · Compare",
-    title: "Shop multiple things at once",
-    text: "Ask for up to 10 product types in one request and get category-wise recommendations.",
-    query: multiSearchExample
+    icon: Gamepad2,
+    eyebrow: "GAMING",
+    title: "Upgrade your gaming setup",
+    text: "Explore gaming laptops, accessories and gear around your budget.",
+    query: "Help me build a gaming setup under ₹1,00,000"
   },
   {
-    icon: TrendingDown,
-    eyebrow: "03 · Save",
-    title: "Find the better deal",
-    text: "Compare available store offers and see the lowest listed price before you buy.",
-    query: "Find the lowest price for Samsung Galaxy S series phone"
+    icon: Smartphone,
+    eyebrow: "EVERYDAY TECH",
+    title: "Find your everyday essentials",
+    text: "Compare phones, earbuds and useful tech for daily life.",
+    query: "Find a good smartphone and wireless earbuds under ₹30,000"
+  },
+  {
+    icon: House,
+    eyebrow: "HOME",
+    title: "Make your home work better",
+    text: "Shop appliances and home essentials in one simple request.",
+    query: "Find a refrigerator, washing machine and microwave under ₹70,000"
   }
 ];
 
@@ -192,15 +199,15 @@ function Home() {
               </span>
 
               <h1>
-                Find the <span className="gradient-text">best product</span>
+                The right product.
                 <br />
-                without the endless tabs.
+                <span className="gradient-text">A smarter buy.</span>
               </h1>
 
               <p>
-                Tell SmartBuy AI what you want. Compare up to 10 product types
-                in one request, discover live listings and find better prices
-                across stores in India.
+                Tell us what matters — your budget, use case and must-have features.
+                SmartBuy AI helps you explore relevant listings and compare
+                available store offers, even across multiple product types.
               </p>
 
               <form
@@ -216,7 +223,7 @@ function Home() {
                   type="text"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Try “chair, mobile, drone and fridge under ₹50,000”"
+                  placeholder="e.g. Best laptop under ₹60,000 for coding"
                   aria-label="What are you shopping for?"
                   maxLength={200}
                 />
@@ -280,13 +287,13 @@ function Home() {
                     <strong>The journey to a smarter buy</strong>
                   </div>
                 </div>
-                <span className="decision-hub-count">4 thoughtful steps</span>
+                <span className="decision-hub-count">One clear journey</span>
               </div>
 
               <div className="decision-hub-intro">
                 <span>NOT JUST A PRODUCT SEARCH</span>
-                <h2>From a rough idea to a <em>clear decision.</em></h2>
-                <p>See how SmartBuy turns your shopping brief into a shortlist you can understand.</p>
+                <h2>Your shopping brief. A <em>better decision.</em></h2>
+                <p>A simple, transparent process to help you choose with confidence.</p>
               </div>
 
               <div className="decision-steps" aria-label="How SmartBuy AI works">
@@ -406,25 +413,33 @@ function Home() {
           </div>
         </section>
 
-        <section className="container home-section">
-          <div className="section-heading">
-            <span>Why SmartBuy AI</span>
-            <h2>Less searching. More confident shopping.</h2>
-            <p>One simple flow from your shopping brief to a shortlist you can compare.</p>
+        <section className="container home-section intent-section">
+          <div className="section-heading section-heading-row">
+            <div>
+              <span>START WITH AN IDEA</span>
+              <h2>What are you shopping for?</h2>
+              <p>Choose a goal to give SmartBuy AI a useful starting point.</p>
+            </div>
+            <Link to="/chatbot" className="text-link">
+              Ask something else <ArrowRight size={16} />
+            </Link>
           </div>
 
-          <div className="feature-grid">
-            {features.map(({ icon: Icon, eyebrow, title, text, query: featureQuery }, index) => (
+          <div className="intent-grid">
+            {shoppingIntents.map(({ icon: Icon, eyebrow, title, text, query: intentQuery }) => (
               <Link
                 key={title}
-                to={`/chatbot?q=${encodeURIComponent(featureQuery)}`}
-                className={`feature-card feature-card-${index + 1}`}
+                to={`/chatbot?q=${encodeURIComponent(intentQuery)}`}
+                className="intent-card"
               >
-                <span className="feature-step">{eyebrow}</span>
-                <span className="feature-icon"><Icon size={22} /></span>
-                <h3>{title}</h3>
+                <span className="intent-card-top">
+                  <span className="intent-icon"><Icon size={21} /></span>
+                  <ArrowUpRight size={17} className="intent-arrow" />
+                </span>
+                <span className="intent-eyebrow">{eyebrow}</span>
+                <strong>{title}</strong>
                 <p>{text}</p>
-                <span className="feature-link">Try it <ArrowRight size={15} /></span>
+                <span className="intent-action">Explore idea <ArrowRight size={14} /></span>
               </Link>
             ))}
           </div>
