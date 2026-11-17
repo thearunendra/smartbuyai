@@ -776,11 +776,16 @@ async function detectSearchIntents(query) {
       seen.add(category);
     }
 
-    for (const item of parsedIntents) {
-      if (seen.has(item.category)) continue;
-      merged.push(item);
-      seen.add(item.category);
-      if (merged.length >= MAX_MULTI_SEARCH_INTENTS) break;
+    // When two or more catalogue aliases were explicitly present, they
+    // define the requested list. Do not append model-only guesses (for
+    // example, interpreting "mobile" as an extra Tablet intent).
+    if (explicitCategories.length < 2) {
+      for (const item of parsedIntents) {
+        if (seen.has(item.category)) continue;
+        merged.push(item);
+        seen.add(item.category);
+        if (merged.length >= MAX_MULTI_SEARCH_INTENTS) break;
+      }
     }
 
     return merged.length >= 2
