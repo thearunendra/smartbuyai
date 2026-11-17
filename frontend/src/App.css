@@ -3,23 +3,24 @@
    ===================================================== */
 
 :root {
-  --bg: #f6f7fb;
-  --bg-subtle: #eef1f7;
-  --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --border: #e4e7ee;
-  --border-strong: #cfd5e1;
+  --bg: #f7f5f0;
+  --bg-subtle: #f0ece4;
+  --surface: #fffefa;
+  --surface-2: #faf8f3;
+  --border: #e8e1d7;
+  --border-strong: #d3c8b8;
 
-  --text: #0f172a;
-  --text-muted: #5b6477;
-  --text-subtle: #8a93a6;
+  --text: #17283c;
+  --text-muted: #626f80;
+  --text-subtle: #8993a0;
 
-  --primary: #142b4d;
-  --primary-hover: #0f2340;
-  --primary-soft: #eaf1f7;
+  --primary: #14263d;
+  --primary-hover: #0d1d30;
+  --primary-soft: #f2ecdf;
   --primary-text: #ffffff;
-  --accent: #0d9488;
-  --gradient: linear-gradient(135deg, #142b4d 0%, #0d9488 100%);
+  --accent: #92744c;
+  --accent-soft: #f2ecdf;
+  --gradient: linear-gradient(135deg, #14263d 0%, #2d435b 100%);
 
   --success: #16a34a;
   --success-soft: #ecfdf3;
@@ -48,21 +49,23 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b0f19;
-    --bg-subtle: #111727;
-    --surface: #121829;
-    --surface-2: #171e32;
-    --border: #232b41;
-    --border-strong: #323c57;
+    --bg: #0c1521;
+    --bg-subtle: #142235;
+    --surface: #18283a;
+    --surface-2: #1d3045;
+    --border: #2b3b4e;
+    --border-strong: #405268;
 
-    --text: #e8ebf3;
-    --text-muted: #a3abbe;
-    --text-subtle: #717a90;
+    --text: #f4f0e8;
+    --text-muted: #bac2cc;
+    --text-subtle: #8b97a6;
 
-    --primary: #0d9488;
-    --primary-hover: #14b8a6;
-    --primary-soft: rgba(13, 148, 136, 0.16);
-    --primary-text: #0b0f19;
+    --primary: #d2b889;
+    --primary-hover: #e0c99e;
+    --primary-soft: rgba(210, 184, 137, 0.14);
+    --primary-text: #14263d;
+    --accent: #d2b889;
+    --accent-soft: rgba(210, 184, 137, 0.14);
 
     --success: #4ade80;
     --success-soft: rgba(74, 222, 128, 0.1);
@@ -74,7 +77,7 @@
     --shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
     --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.5);
 
-    --nav-bg: rgba(11, 15, 25, 0.75);
+    --nav-bg: rgba(12, 21, 33, 0.78);
     --skeleton: #1b2236;
     --skeleton-shine: #242d45;
 
@@ -83,21 +86,21 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #0b0f19;
-  --bg-subtle: #111727;
-  --surface: #121829;
-  --surface-2: #171e32;
-  --border: #232b41;
-  --border-strong: #323c57;
+  --bg: #0c1521;
+  --bg-subtle: #142235;
+  --surface: #18283a;
+  --surface-2: #1d3045;
+  --border: #2b3b4e;
+  --border-strong: #405268;
 
-  --text: #e8ebf3;
-  --text-muted: #a3abbe;
-  --text-subtle: #717a90;
+  --text: #f4f0e8;
+  --text-muted: #bac2cc;
+  --text-subtle: #8b97a6;
 
   --primary: #818cf8;
   --primary-hover: #a5b4fc;
   --primary-soft: rgba(129, 140, 248, 0.14);
-  --primary-text: #0b0f19;
+  --primary-text: #14263d;
 
   --success: #4ade80;
   --success-soft: rgba(74, 222, 128, 0.1);
@@ -109,7 +112,7 @@
   --shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
   --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.5);
 
-  --nav-bg: rgba(11, 15, 25, 0.75);
+  --nav-bg: rgba(12, 21, 33, 0.78);
   --skeleton: #1b2236;
   --skeleton-shine: #242d45;
 
@@ -222,7 +225,7 @@ button {
 .btn-primary {
   background: var(--primary);
   color: var(--primary-text);
-  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.22);
+  box-shadow: 0 6px 18px rgba(183, 154, 108, 0.22);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -317,7 +320,7 @@ button {
   padding: 4px 10px;
   border-radius: 999px;
   background: var(--primary-soft);
-  color: var(--primary);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 600;
 }
