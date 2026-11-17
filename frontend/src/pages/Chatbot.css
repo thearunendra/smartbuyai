@@ -1068,3 +1068,102 @@
     transition: none;
   }
 }
+
+
+/* Dark-mode compatibility for the AI assistant workspace */
+:root[data-theme="dark"] .chat-shell {
+  border-color: #30475F;
+  background: #182B40;
+}
+
+:root[data-theme="dark"] .chat-main,
+:root[data-theme="dark"] .chat-composer-area {
+  background: #182B40;
+}
+
+:root[data-theme="dark"] .chat-topbar {
+  border-bottom-color: #30475F;
+  background: linear-gradient(100deg, #182B40 0%, #1D354D 100%);
+}
+
+:root[data-theme="dark"] .chat-topbar-identity strong,
+:root[data-theme="dark"] .chat-welcome h2,
+:root[data-theme="dark"] .welcome-suggestions-heading strong {
+  color: #F4F8FC;
+}
+
+:root[data-theme="dark"] .chat-topbar-identity div > span,
+:root[data-theme="dark"] .chat-welcome > p,
+:root[data-theme="dark"] .welcome-suggestions-heading span {
+  color: #B9C8D6;
+}
+
+:root[data-theme="dark"] .chat-topbar-status {
+  border-color: #36536D;
+  background: rgba(56, 189, 248, 0.12);
+  color: #BAE6FD;
+}
+
+:root[data-theme="dark"] .chat-messages {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(56, 189, 248, 0.09), transparent 56%),
+    #13243A;
+}
+
+:root[data-theme="dark"] .chat-welcome {
+  border-color: #36536D;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(56, 189, 248, 0.13), transparent 56%),
+    linear-gradient(145deg, #182B40 0%, #1D354D 100%);
+}
+
+:root[data-theme="dark"] .welcome-benefits span,
+:root[data-theme="dark"] .welcome-suggestions button {
+  border-color: #36536D;
+  background: #1D354D;
+  color: #E8F0F7;
+}
+
+:root[data-theme="dark"] .welcome-suggestions button:hover {
+  border-color: #38BDF8;
+  background: #233E57;
+}
+
+:root[data-theme="dark"] .msg-ai .msg-bubble {
+  border-color: #36536D;
+  background: #182B40;
+  color: #E8F0F7;
+}
+
+:root[data-theme="dark"] .chat-composer-area {
+  border-top-color: #30475F;
+  background: linear-gradient(180deg, #182B40 0%, #13243A 100%);
+}
+
+:root[data-theme="dark"] .chat-composer {
+  border-color: #48647E;
+  background: #1D354D;
+}
+
+:root[data-theme="dark"] .chat-composer input {
+  color: #F4F8FC;
+}
+
+:root[data-theme="dark"] .chat-composer input::placeholder {
+  color: #8FA4B8;
+}
+
+:root[data-theme="dark"] .composer-icon {
+  background: #243F58;
+  color: #BAE6FD;
+}
+
+:root[data-theme="dark"] .chat-composer-note {
+  color: #8FA4B8;
+}
+
+:root[data-theme="dark"] .chat-composer-note > span {
+  border-color: #405A73;
+  background: #1D354D;
+  color: #BAE6FD;
+}
