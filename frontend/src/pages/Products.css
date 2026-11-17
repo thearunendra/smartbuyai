@@ -533,3 +533,21 @@
     white-space: normal;
   }
 }
+
+
+.products-count-block {
+  display: grid;
+  gap: 4px;
+}
+
+.prices-checked-at {
+  color: #7890A4;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+@media (max-width: 1000px) {
+  .products-count-block {
+    gap: 6px;
+  }
+}
