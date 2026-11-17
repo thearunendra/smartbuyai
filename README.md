@@ -98,7 +98,10 @@ In MongoDB Atlas, allow network access from Render (e.g. `0.0.0.0/0`).
 
 - Gemini free tier: 15 requests/minute. The backend queues calls to stay
   under it; a search or products page uses about 3 calls.
-- Serper: each chat search uses about 8 credits and each products page about
-  11. Results are cached for 6 hours.
-- Prices in the comparison are read from search results and can lag the
-  store; users are asked to confirm on the store.
+- Serper usage varies with the number of product categories, products
+  compared and cache hits. Volatile shopping listings, merchant pages, offers
+  and final search answers are cached for 15 minutes; product specifications
+  are cached for 6 hours and gallery images for 24 hours.
+- Prices in the comparison are retrieved from search-result data, not a
+  guaranteed live merchant feed. They can lag the store; users should confirm
+  the final price and product variant on the merchant site.
