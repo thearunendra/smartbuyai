@@ -55,7 +55,7 @@ test('a suggestion chip asks that question', () => {
 test('popular product shortcuts open the selected product category', () => {
   renderHome()
 
-  expect(screen.getByRole('link', { name: /Smartphones Electronics/ })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: /SmartphonesElectronics/ })).toHaveAttribute(
     'href',
     '/products?category=Smartphones'
   )
@@ -83,7 +83,7 @@ test('the multi-product preview button starts the example search', () => {
 test('department cards open the products page', () => {
   renderHome()
 
-  expect(screen.getByRole('link', { name: /Furniture/ })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: /Furniture 7 product types/ })).toHaveAttribute(
     'href',
     '/products?department=Furniture'
   )
