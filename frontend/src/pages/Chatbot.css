@@ -108,6 +108,33 @@
   align-items: start;
 }
 
+.msg-product-groups {
+  display: grid;
+  gap: 20px;
+}
+
+.msg-product-group {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.msg-product-group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.msg-product-group-title span {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
 /* Typing indicator */
 
 .typing {
