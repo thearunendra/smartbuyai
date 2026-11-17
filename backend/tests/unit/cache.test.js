@@ -2,6 +2,7 @@
 // (hit, miss, remaining TTL, errors). Redis is the mock in __mocks__.
 
 const SIX_HOURS = 6 * 60 * 60 * 1000;
+const FIFTEEN_MINUTES = 15 * 60 * 1000;
 
 // A fresh copy of cache.js, with or without Redis configured.
 function loadCache({ redis = false } = {}) {
@@ -71,6 +72,23 @@ describe("memory cache (no Redis)", () => {
     expect(await getCached("k2")).toBeNull();
   });
 
+  test("shopping and offers expire after 15 minutes", async () => {
+    jest.useFakeTimers();
+
+    const { getCached, setCached } = loadCache();
+
+    await setCached("smartbuy:shopping:phone", ["listing"]);
+    await setCached("smartbuy:offers:phone", ["offer"]);
+
+    jest.advanceTimersByTime(FIFTEEN_MINUTES - 1000);
+    expect(await getCached("smartbuy:shopping:phone")).toEqual(["listing"]);
+    expect(await getCached("smartbuy:offers:phone")).toEqual(["offer"]);
+
+    jest.advanceTimersByTime(2000);
+    expect(await getCached("smartbuy:shopping:phone")).toBeNull();
+    expect(await getCached("smartbuy:offers:phone")).toBeNull();
+  });
+
   test("keeps at most 500 entries, dropping the oldest", async () => {
     const { getCached, setCached } = loadCache();
 
@@ -97,12 +115,20 @@ describe("Redis cache", () => {
     expect(client.options).toEqual({ url: "https://redis.test", token: "token" });
   });
 
-  test("writes to Redis with a 6 hour expiry", async () => {
+  test("uses the six-hour default TTL for unspecified cache prefixes", async () => {
     const { setCached, client } = loadCache({ redis: true });
 
     await setCached("r1", "v");
 
     expect(client.set).toHaveBeenCalledWith("r1", "v", { ex: 21600 });
+  });
+
+  test("uses a 15-minute TTL for volatile shopping prices", async () => {
+    const { setCached, client } = loadCache({ redis: true });
+
+    await setCached("smartbuy:shopping:phone", "v");
+
+    expect(client.set).toHaveBeenCalledWith("smartbuy:shopping:phone", "v", { ex: 900 });
   });
 
   test("a Redis hit is kept in memory for the remaining TTL", async () => {
