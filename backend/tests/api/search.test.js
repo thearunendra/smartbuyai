@@ -183,19 +183,17 @@ describe("GET /api/products", () => {
 
   test("limits product browsing to 10 searches per signed-in user per minute", async () => {
     const { auth } = await newUser();
+    const query = unique("rate limited browse");
+    const path = `/api/products?category=Smartphones&q=${encodeURIComponent(query)}`;
     serper([shoppingItem("Rate Limited Browse Product", 20000)]);
     geminiReply({ indexes: [0] });
 
     for (let index = 0; index < 10; index += 1) {
-      const response = await request(app)
-        .get(`/api/products?category=Smartphones&q=${encodeURIComponent(unique("rate limited browse"))}`)
-        .set(auth);
+      const response = await request(app).get(path).set(auth);
       expect(response.status).toBe(200);
     }
 
-    const blocked = await request(app)
-      .get(`/api/products?category=Smartphones&q=${encodeURIComponent(unique("rate limited browse"))}`)
-      .set(auth);
+    const blocked = await request(app).get(path).set(auth);
 
     expect(blocked.status).toBe(429);
     expect(blocked.body.message).toMatch(/searching too fast/i);
