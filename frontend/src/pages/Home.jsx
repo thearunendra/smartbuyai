@@ -66,11 +66,47 @@ const features = [
   }
 ];
 
+const decisionSteps = [
+  {
+    number: "01",
+    label: "Understand",
+    summary: "Your needs, budget & priorities",
+    detailTitle: "Start with what matters to you.",
+    detail: "SmartBuy reads your brief and identifies the budget, product type, use case and must-have features behind your request.",
+    icon: Sparkles
+  },
+  {
+    number: "02",
+    label: "Discover",
+    summary: "Relevant products from stores",
+    detailTitle: "Find options that fit your brief.",
+    detail: "Your requirements guide product discovery, so the shortlist stays focused on relevant options instead of an endless catalogue.",
+    icon: Search
+  },
+  {
+    number: "03",
+    label: "Compare",
+    summary: "Price, features & seller details",
+    detailTitle: "Look beyond the headline price.",
+    detail: "Compare the details that influence a good purchase: specifications, available offers and seller information.",
+    icon: Store
+  },
+  {
+    number: "04",
+    label: "Recommend",
+    summary: "A shortlist with clear reasons",
+    detailTitle: "Choose with more confidence.",
+    detail: "SmartBuy brings the comparison together and explains why an option may suit your priorities. The final decision stays with you.",
+    icon: BadgeCheck
+  }
+];
+
 function Home() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [voiceMessage, setVoiceMessage] = useState("");
   const [listening, setListening] = useState(false);
+  const [activeDecisionStep, setActiveDecisionStep] = useState(0);
   const recognitionRef = useRef(null);
 
   useEffect(() => () => recognitionRef.current?.stop?.(), []);
@@ -235,59 +271,57 @@ function Home() {
               </div>
             </div>
 
-            <div className="hero-preview">
-              <div className="preview-topline">
-                <div className="preview-brand">
-                  <span className="preview-avatar"><Bot size={19} /></span>
+            <div className="hero-preview decision-hub">
+              <div className="decision-hub-head">
+                <div className="decision-hub-brand">
+                  <span className="decision-hub-mark"><Bot size={19} /></span>
                   <div>
-                    <strong>SmartBuy AI</strong>
-                    <span><i className="dot-live" /> Shopping copilot</span>
+                    <span>INSIDE SMARTBUY AI</span>
+                    <strong>The journey to a smarter buy</strong>
                   </div>
                 </div>
-                <span className="preview-live"><span className="dot-live" /> Ready</span>
+                <span className="decision-hub-count">4 thoughtful steps</span>
               </div>
 
-              <div className="preview-kicker">A smarter way to shop</div>
-              <div className="preview-user">
-                “Chair, mobile, drone and fridge under ₹50,000”
+              <div className="decision-hub-intro">
+                <span>NOT JUST A PRODUCT SEARCH</span>
+                <h2>From a rough idea to a <em>clear decision.</em></h2>
+                <p>See how SmartBuy turns your shopping brief into a shortlist you can understand.</p>
               </div>
 
-              <div className="preview-plan">
-                <div className="preview-plan-icon"><Sparkles size={17} /></div>
-                <div>
-                  <strong>One request. Separate searches.</strong>
-                  <span>SmartBuy AI splits your brief into product types.</span>
-                </div>
-              </div>
-
-              <div className="preview-results">
-                {[
-                  { label: "Office chair", price: "Compare options", tone: "violet" },
-                  { label: "Smartphone", price: "Find lowest offer", tone: "blue" },
-                  { label: "Camera drone", price: "Compare stores", tone: "cyan" },
-                  { label: "Refrigerator", price: "Within your budget", tone: "green" }
-                ].map((item) => (
-                  <div className="preview-result" key={item.label}>
-                    <span className={`preview-result-icon ${item.tone}`}>
-                      <Check size={14} />
+              <div className="decision-steps" aria-label="How SmartBuy AI works">
+                {decisionSteps.map(({ number, label, summary, icon: Icon }, index) => (
+                  <button
+                    key={number}
+                    type="button"
+                    className={`decision-step${activeDecisionStep === index ? " is-active" : ""}`}
+                    onClick={() => setActiveDecisionStep(index)}
+                    aria-pressed={activeDecisionStep === index}
+                  >
+                    <span className="decision-step-icon"><Icon size={19} /></span>
+                    <span className="decision-step-copy">
+                      <small>{number}</small>
+                      <strong>{label}</strong>
+                      <span>{summary}</span>
                     </span>
-                    <strong>{item.label}</strong>
-                    <span>{item.price}</span>
-                    <BadgeCheck size={15} className="preview-result-check" />
-                  </div>
+                    <ArrowUpRight size={15} className="decision-step-arrow" />
+                  </button>
                 ))}
               </div>
 
-              <button
-                type="button"
-                className="preview-try"
-                onClick={() => ask(multiSearchExample)}
-              >
-                Try this multi-product search <ArrowRight size={15} />
-              </button>
-              <p className="preview-disclaimer">
-                Example workflow · Live prices are fetched when you search
-              </p>
+              <div className="decision-detail" key={activeDecisionStep}>
+                <span className="decision-detail-number">{decisionSteps[activeDecisionStep].number}</span>
+                <div>
+                  <span className="decision-detail-kicker">WHAT SMARTBUY DOES</span>
+                  <strong>{decisionSteps[activeDecisionStep].detailTitle}</strong>
+                  <p>{decisionSteps[activeDecisionStep].detail}</p>
+                </div>
+              </div>
+
+              <div className="decision-hub-footer">
+                <span><i className="dot-live" /> Clear comparisons. Your decision.</span>
+                <span>YOU STAY IN CONTROL</span>
+              </div>
             </div>
           </div>
         </section>
