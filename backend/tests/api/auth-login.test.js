@@ -70,6 +70,27 @@ test("migrates legacy bcrypt passwords safely, including passwords over 72 bytes
   expect(oldTruncatedPassword.status).toBe(401);
 });
 
+test("handles missing request bodies without throwing a server error", async () => {
+  const response = await request(app).post("/api/auth/login");
+
+  expect(response.status).toBe(401);
+  expect(response.body.message).toBe("Invalid email or password.");
+});
+
+test.each([
+  ["null", null],
+  ["array", []],
+  ["primitive", "not-an-object"]
+])("rejects a %s JSON request body", async (_, body) => {
+  const response = await request(app)
+    .post("/api/auth/login")
+    .set("Content-Type", "application/json")
+    .send(body);
+
+  expect(response.status).toBe(400);
+  expect(response.body.message).toBe("Request body must be a JSON object.");
+});
+
 describe("GET /api/auth/me", () => {
   test("returns the signed-in user", async () => {
     const response = await request(app)

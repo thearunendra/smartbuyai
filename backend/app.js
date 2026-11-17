@@ -136,6 +136,27 @@ const CATEGORIES = [...Object.keys(CATEGORY_QUERIES), "Other"];
 applySecurity(app);
 app.use(express.json({ limit: "20kb" }));
 
+// Do not let missing, null, primitive or array payloads crash route handlers.
+app.use((req, res, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    if (req.body === undefined) {
+      req.body = {};
+    }
+
+    if (
+      req.body === null ||
+      typeof req.body !== "object" ||
+      Array.isArray(req.body)
+    ) {
+      return res.status(400).json({
+        message: "Request body must be a JSON object."
+      });
+    }
+  }
+
+  next();
+});
+
 app.use("/api/auth", authRouter);
 app.use("/api/chats", chatsRouter);
 app.use("/api/wishlist", wishlistRouter);
