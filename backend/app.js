@@ -383,7 +383,10 @@ const ai = new GoogleGenAI({
 
 // Keep a small safety margin below the provider's free-tier request rate.
 // Every retry also reserves a slot, so recovery attempts respect the same limit.
-const GEMINI_RPM = Number(process.env.GEMINI_RPM) || 12;
+const configuredGeminiRpm = Number(process.env.GEMINI_RPM);
+const GEMINI_RPM = process.env.NODE_ENV === "test"
+  ? Math.max(1, configuredGeminiRpm || 1000)
+  : Math.max(1, Math.min(12, configuredGeminiRpm || 12));
 const MAX_GEMINI_RETRIES = 2;
 const geminiCalls = [];
 
@@ -510,7 +513,10 @@ function parsePrice(priceText) {
 
 // Serper permits up to five requests per second. Keep our process-wide
 // request start rate below that ceiling during multi-product searches.
-const SERPER_MIN_INTERVAL_MS = Number(process.env.SERPER_MIN_INTERVAL_MS) || 350;
+const SERPER_MIN_INTERVAL_MS = Math.max(
+  350,
+  Number(process.env.SERPER_MIN_INTERVAL_MS) || 350
+);
 const MAX_SERPER_ATTEMPTS = 4;
 let serperNextSlotAt = 0;
 let serperSlotQueue = Promise.resolve();
