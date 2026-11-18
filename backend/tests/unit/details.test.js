@@ -278,7 +278,7 @@ describe("findAlternatives", () => {
 
     // Gemini's filter failed, so the listings come back as they are.
     expect(alternatives.map((item) => item.name)).toEqual(["Speaker A", "Speaker B"]);
-    expect(generateContent).toHaveBeenCalledTimes(1);
+    expect(generateContent).toHaveBeenCalledTimes(3);
   });
 
   test("survives a failed second round and an empty fill-up search", async () => {
@@ -358,7 +358,7 @@ describe("getProductDetails", () => {
 
     geminiFails();
     await getProductDetails("Detail Phone Three", 30000);
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(6);
   });
 
   test("a failed spec search still describes the product but isn't cached", async () => {
