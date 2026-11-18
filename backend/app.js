@@ -1744,13 +1744,19 @@ app.post("/api/search", requireDB, optionalAuth, requireAuth, searchLimiter, asy
 // immediately, then the page refreshes itself while richer comparisons run.
 const productPageRefreshes = new Map();
 
-function startProductPageRefresh({ pageKey, category, query, listings, checkedAt }) {
+function startProductPageRefresh({ pageKey, category, query, listings, checkedAt, fastPayload }) {
   if (productPageRefreshes.has(pageKey)) return;
 
-  const refresh = (async () => {
+  // Keep exactly the same products and order shown in the first response.
+  // Only enrich those cards with cross-store offers; do not run another
+  // Gemini curation pass that can reorder or replace products on screen.
+  const selectedProducts = listings.slice(0, PRODUCTS_PER_PAGE);
+  const refreshState = { fastPayload, promise: null };
+  productPageRefreshes.set(pageKey, refreshState);
+
+  refreshState.promise = (async () => {
     try {
-      const curated = await filterListings(category, listings);
-      const { products, complete } = await compareProducts(curated);
+      const { products, complete } = await compareProducts(selectedProducts);
       const payload = {
         category,
         query,
@@ -1768,7 +1774,7 @@ function startProductPageRefresh({ pageKey, category, query, listings, checkedAt
       });
     } catch (error) {
       console.warn("Background product comparison failed:", error.message);
-      const fallback = listings.slice(0, PRODUCTS_PER_PAGE);
+      const fallback = selectedProducts;
       await setCached(pageKey, {
         category,
         query,
@@ -1779,11 +1785,11 @@ function startProductPageRefresh({ pageKey, category, query, listings, checkedAt
         products: fallback
       }, { ttlSeconds: 60 });
     } finally {
-      productPageRefreshes.delete(pageKey);
+      if (productPageRefreshes.get(pageKey) === refreshState) {
+        productPageRefreshes.delete(pageKey);
+      }
     }
   })();
-
-  productPageRefreshes.set(pageKey, refresh);
 }
 
 app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
@@ -1804,6 +1810,14 @@ app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
 
   if (cachedPage) {
     return res.json(cachedPage);
+  }
+
+  // The frontend polls while offers are being enriched. Return the exact same
+  // first response during that time instead of launching another Shopping
+  // search every few seconds (which wastes credits and changes the product grid).
+  const activeRefresh = productPageRefreshes.get(pageKey);
+  if (activeRefresh) {
+    return res.json(activeRefresh.fastPayload);
   }
 
   try {
@@ -1833,15 +1847,15 @@ app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
       products
     };
 
-    // Respond first. Ranking, model curation and store offer extraction
-    // continue in the background; subsequent page requests receive the
-    // enriched cached response as soon as it is ready.
+    // Respond first with these exact listings. Only store-offer lookups run
+    // in the background; the product names/order remain stable.
     startProductPageRefresh({
       pageKey,
-      category: search || category,
+      category,
       query,
-      listings,
-      checkedAt
+      listings: products,
+      checkedAt,
+      fastPayload
     });
 
     return res.json(fastPayload);
