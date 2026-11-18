@@ -572,7 +572,7 @@
   padding: 11px 14px;
   border: 1px solid #C7E2F2;
   border-radius: 12px;
-  background: #F0F8FD;
+  background: var(--primary-soft);
   color: #245D7B;
   font-size: 12px;
   line-height: 1.55;
