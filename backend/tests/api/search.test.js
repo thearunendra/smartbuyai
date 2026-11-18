@@ -153,7 +153,7 @@ describe("POST /api/search", () => {
 });
 
 describe("GET /api/products", () => {
-  test("an unknown category falls back to Smartphones, and pages are cached", async () => {
+  test("an unknown category falls back to Smartphones and returns comparisons on the first response", async () => {
     const fetchMock = serper([shoppingItem("Browse Phone", 20000)]);
 
     geminiReply({ indexes: [0] });
@@ -161,23 +161,66 @@ describe("GET /api/products", () => {
     const first = await request(app).get("/api/products?category=Spaceships");
 
     expect(first.status).toBe(200);
-    expect(first.body).toMatchObject({ category: "Smartphones", query: "best 5g smartphone", count: 1 });
+    expect(first.body).toMatchObject({
+      category: "Smartphones",
+      query: "best 5g smartphone",
+      count: 1,
+      comparisonComplete: true,
+      comparisonStatus: "complete"
+    });
+    expect(first.body.products[0].offers).toEqual([
+      { store: "Amazon", price: 20000, link: null }
+    ]);
 
-    const firstNames = first.body.products.map((product) => product.name);
+    const calls = fetchMock.mock.calls.length;
     const second = await request(app).get("/api/products?category=Spaceships");
 
-    expect(second.body).toMatchObject({
-      category: "Smartphones",
-      query: "best 5g smartphone"
-    });
-    expect(second.body.products.map((product) => product.name)).toEqual(firstNames);
+    expect(second.body).toEqual(first.body);
+    expect(fetchMock.mock.calls).toHaveLength(calls);
+  });
 
-    // A second frontend poll must reuse the in-flight payload and must not
-    // launch another Google Shopping request while store offers are enriched.
-    const shoppingCalls = fetchMock.mock.calls.filter(([url]) =>
-      String(url).includes("google.serper.dev/shopping")
+  test("returns cross-store offers in the initial catalogue response", async () => {
+    const fetchMock = mockSerper((endpoint) => {
+      if (endpoint === "shopping") {
+        return { shopping: [shoppingItem("Croma Match Phone", 20000, "amazon.in")] };
+      }
+
+      return {
+        organic: [{
+          title: "Croma Match Phone",
+          link: "https://www.croma.com/croma-match-phone/p/123",
+          snippet: "Croma Match Phone available for ₹18,500."
+        }]
+      };
+    });
+
+    geminiReply({ indexes: [0] });
+    geminiReply({
+      products: [{
+        product: 0,
+        offers: [{ page: 0, store: "Croma", price: 18500 }]
+      }]
+    });
+
+    const response = await request(app).get("/api/products?category=Smartphones");
+
+    expect(response.status).toBe(200);
+    expect(response.body.comparisonStatus).toBe("complete");
+    expect(response.body.products[0]).toMatchObject({
+      name: "Croma Match Phone",
+      price: 18500,
+      store: "Croma",
+      offers: [
+        { store: "Croma", price: 18500, link: "https://www.croma.com/croma-match-phone/p/123" },
+        { store: "Amazon", price: 20000, link: null }
+      ]
+    });
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("google.serper.dev/shopping"),
+        expect.stringContaining("google.serper.dev/search")
+      ])
     );
-    expect(shoppingCalls).toHaveLength(1);
   });
 
   test("a search text replaces the category's query", async () => {
