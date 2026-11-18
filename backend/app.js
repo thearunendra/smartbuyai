@@ -363,7 +363,12 @@ app.get("/api/health/ready", (req, res) => {
   const ready = isDBReady();
   res.status(ready ? 200 : 503).json({
     ok: ready,
-    database: ready ? "connected" : "disconnected"
+    database: ready ? "connected" : "disconnected",
+    providers: {
+      geminiConfigured: Boolean(process.env.GEMINI_API_KEY),
+      serperConfigured: SERPER_API_KEYS.length > 0
+    },
+    cache: cacheMode
   });
 });
 
@@ -376,8 +381,6 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
-// The free tier allows 15 requests a minute for this model. Calls beyond
-// GEMINI_RPM in the last minute wait for a slot instead of failing.
 // Keep a small safety margin below the provider's free-tier request rate.
 // Every retry also reserves a slot, so recovery attempts respect the same limit.
 const GEMINI_RPM = Number(process.env.GEMINI_RPM) || 12;
