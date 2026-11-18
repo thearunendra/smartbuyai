@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import {
   BadgeCheck,
   ArrowRight,
-  ShoppingBag,
   Sparkles,
   Store,
   Zap
@@ -30,15 +29,9 @@ function AuthLayout({ children }) {
 
         <Link to="/" className="auth-logo" aria-label="SmartBuy AI home">
           <span className="auth-logo-emblem" aria-hidden="true">
-            <ShoppingBag className="auth-logo-bag" size={31} strokeWidth={2.1} />
-            <span className="auth-logo-spark">
-              <Sparkles size={16} strokeWidth={2.4} />
-            </span>
+            <Sparkles className="auth-logo-sparkle" size={27} strokeWidth={2.2} />
           </span>
-          <span className="auth-logo-type">
-            <span className="auth-logo-wordmark">SmartBuy<span>AI</span></span>
-            <span className="auth-logo-tagline">INTELLIGENT SHOPPING, SIMPLIFIED</span>
-          </span>
+          <span className="auth-logo-wordmark">SmartBuy<span>AI</span></span>
         </Link>
 
         <div className="auth-brand-content">
