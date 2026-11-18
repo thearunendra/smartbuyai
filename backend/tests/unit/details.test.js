@@ -278,7 +278,7 @@ describe("findAlternatives", () => {
 
     // Gemini's filter failed, so the listings come back as they are.
     expect(alternatives.map((item) => item.name)).toEqual(["Speaker A", "Speaker B"]);
-    expect(generateContent).toHaveBeenCalledTimes(3);
+    expect(generateContent).toHaveBeenCalledTimes(2);
   });
 
   test("survives a failed second round and an empty fill-up search", async () => {
@@ -348,15 +348,19 @@ describe("getProductDetails", () => {
     expect(generateContent).toHaveBeenCalledTimes(4);
   });
 
-  test("is unavailable and not cached when Gemini fails", async () => {
+  test("is unavailable and not cached when Gemini remains unavailable", async () => {
     serperByQuery({});
-    geminiFails();
+    geminiFails("503 UNAVAILABLE");
+    geminiFails("503 UNAVAILABLE");
+    geminiFails("503 UNAVAILABLE");
 
     const details = await getProductDetails("Detail Phone Three", 30000);
 
     expect(details).toEqual({ images: [], alternatives: [], available: false });
 
-    geminiFails();
+    geminiFails("503 UNAVAILABLE");
+    geminiFails("503 UNAVAILABLE");
+    geminiFails("503 UNAVAILABLE");
     await getProductDetails("Detail Phone Three", 30000);
     expect(generateContent).toHaveBeenCalledTimes(6);
   });
