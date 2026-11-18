@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowUpDown, Check, PackageSearch, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowUpDown, PackageSearch, Search, SlidersHorizontal, X } from "lucide-react";
 import Navbar from "../components/Navbar";
 import ProductCard, { ProductCardSkeleton } from "../components/ProductCard";
 import CategoryTabs from "../components/CategoryTabs";
@@ -60,23 +60,26 @@ function Products() {
   const [minRating, setMinRating] = useState("");
   const [selectedForCompare, setSelectedForCompare] = useState([]);
   const [compareNotice, setCompareNotice] = useState("");
-  const [savedNames, setSavedNames] = useState([]);
+  const [savedWishlist, setSavedWishlist] = useState({ user: null, names: [] });
+  const savedNames = savedWishlist.user === user ? savedWishlist.names : [];
   const [wishlistBusy, setWishlistBusy] = useState("");
   const [compareOpen, setCompareOpen] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      setSavedNames([]);
-      return;
-    }
+    if (!user) return;
 
     let ignore = false;
     api("/api/wishlist")
       .then((data) => {
-        if (!ignore) setSavedNames((data.items || []).map((item) => item.name));
+        if (!ignore) {
+          setSavedWishlist({
+            user,
+            names: (data.items || []).map((item) => item.name)
+          });
+        }
       })
       .catch(() => {
-        if (!ignore) setSavedNames([]);
+        if (!ignore) setSavedWishlist({ user, names: [] });
       });
 
     return () => { ignore = true; };
@@ -230,10 +233,20 @@ function Products() {
     try {
       if (isSaved) {
         await api(`/api/wishlist?name=${encodeURIComponent(product.name)}`, { method: "DELETE" });
-        setSavedNames((current) => current.filter((name) => name !== product.name));
+        setSavedWishlist((current) => ({
+          user,
+          names: current.user === user
+            ? current.names.filter((name) => name !== product.name)
+            : []
+        }));
       } else {
         await api("/api/wishlist", { method: "POST", body: { product } });
-        setSavedNames((current) => [...current, product.name]);
+        setSavedWishlist((current) => ({
+          user,
+          names: current.user === user
+            ? [...current.names, product.name]
+            : [product.name]
+        }));
       }
     } catch (error) {
       setCompareNotice(error.message || "Unable to update wishlist. Please try again.");
