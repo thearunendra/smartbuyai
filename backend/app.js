@@ -1742,54 +1742,65 @@ app.post("/api/search", requireDB, optionalAuth, requireAuth, searchLimiter, asy
 // Keep the expensive Gemini curation and per-product store lookups out of
 // the first catalogue response. Visitors receive Google Shopping listings
 // immediately, then the page refreshes itself while richer comparisons run.
-const productPageRefreshes = new Map();
+const productPageLoads = new Map();
 
-function startProductPageRefresh({ pageKey, category, query, listings, checkedAt, fastPayload }) {
-  if (productPageRefreshes.has(pageKey)) return;
+async function loadCompleteProductPage({ pageKey, category, query }) {
+  const inFlight = productPageLoads.get(pageKey);
+  if (inFlight) return inFlight;
 
-  // Keep exactly the same products and order shown in the first response.
-  // Only enrich those cards with cross-store offers; do not run another
-  // Gemini curation pass that can reorder or replace products on screen.
-  const selectedProducts = listings.slice(0, PRODUCTS_PER_PAGE);
-  const refreshState = { fastPayload, promise: null };
-  productPageRefreshes.set(pageKey, refreshState);
+  const load = (async () => {
+    const listings = await searchShopping(query);
+    const checkedAt = new Date().toISOString();
 
-  refreshState.promise = (async () => {
-    try {
-      const { products, complete } = await compareProducts(selectedProducts);
-      const payload = {
+    if (listings.length === 0) {
+      const emptyPayload = {
         category,
         query,
-        count: products.length,
+        count: 0,
         checkedAt,
-        comparisonComplete: complete,
-        comparisonStatus: complete ? "complete" : "partial",
-        products
+        comparisonComplete: true,
+        comparisonStatus: "complete",
+        products: []
       };
-
-      // Cache complete comparisons for the normal listing TTL. Partial
-      // comparisons use a short TTL so a later visit can retry missing offers.
-      await setCached(pageKey, payload, {
-        ttlSeconds: complete ? undefined : 60
-      });
-    } catch (error) {
-      console.warn("Background product comparison failed:", error.message);
-      const fallback = selectedProducts;
-      await setCached(pageKey, {
-        category,
-        query,
-        count: fallback.length,
-        checkedAt,
-        comparisonComplete: false,
-        comparisonStatus: "partial",
-        products: fallback
-      }, { ttlSeconds: 60 });
-    } finally {
-      if (productPageRefreshes.get(pageKey) === refreshState) {
-        productPageRefreshes.delete(pageKey);
-      }
+      await setCached(pageKey, emptyPayload);
+      return emptyPayload;
     }
+
+    // Select the recommended products first, then enrich every card with its
+    // retailer offers before the API returns. The frontend never renders a
+    // basic listing card and later swaps it for a comparison card.
+    const curated = await filterListings(category, listings);
+    const selectedProducts = curated.slice(0, PRODUCTS_PER_PAGE);
+    const { products, complete } = await compareProducts(selectedProducts);
+
+    const payload = {
+      category,
+      query,
+      count: products.length,
+      checkedAt,
+      comparisonComplete: complete,
+      comparisonStatus: complete ? "complete" : "partial",
+      products
+    };
+
+    // Fully compared pages receive the standard 15-minute TTL. Partial
+    // responses are cached briefly to avoid hammering providers during errors.
+    await setCached(pageKey, payload, {
+      ttlSeconds: complete ? undefined : 60
+    });
+
+    return payload;
   })();
+
+  productPageLoads.set(pageKey, load);
+
+  try {
+    return await load;
+  } finally {
+    if (productPageLoads.get(pageKey) === load) {
+      productPageLoads.delete(pageKey);
+    }
+  }
 }
 
 app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
@@ -1805,65 +1816,27 @@ app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
       : "";
 
   const query = search || CATEGORY_QUERIES[category];
-  const pageKey = cacheKey("page", query);
+  // page-v2 deliberately bypasses old caches that contain un-compared cards.
+  const pageKey = cacheKey("page-v2", query);
   const cachedPage = await getCached(pageKey);
 
   if (cachedPage) {
     return res.json(cachedPage);
   }
 
-  // The frontend polls while offers are being enriched. Return the exact same
-  // first response during that time instead of launching another Shopping
-  // search every few seconds (which wastes credits and changes the product grid).
-  const activeRefresh = productPageRefreshes.get(pageKey);
-  if (activeRefresh) {
-    return res.json(activeRefresh.fastPayload);
-  }
-
   try {
-    // This is the only blocking external request on a cold product page.
-    const listings = await searchShopping(query);
-    if (listings.length === 0) {
-      return res.json({
-        category,
-        query,
-        count: 0,
-        checkedAt: new Date().toISOString(),
-        comparisonComplete: true,
-        comparisonStatus: "complete",
-        products: []
-      });
-    }
-
-    const checkedAt = new Date().toISOString();
-    const products = listings.slice(0, PRODUCTS_PER_PAGE);
-    const fastPayload = {
-      category,
-      query,
-      count: products.length,
-      checkedAt,
-      comparisonComplete: false,
-      comparisonStatus: "pending",
-      products
-    };
-
-    // Respond first with these exact listings. Only store-offer lookups run
-    // in the background; the product names/order remain stable.
-    startProductPageRefresh({
+    const payload = await loadCompleteProductPage({
       pageKey,
-      category,
-      query,
-      listings: products,
-      checkedAt,
-      fastPayload
+      category: search || category,
+      query
     });
 
-    return res.json(fastPayload);
+    return res.json(payload);
   } catch (error) {
-    console.log("Serper Error:", error.message);
+    console.error("Products Error:", error.message);
 
     return res.status(502).json({
-      message: "Unable to fetch live products right now.",
+      message: "Unable to fetch and compare live products right now. Please try again.",
       count: 0,
       products: []
     });
