@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { Lock, Mail, ShieldCheck, User, UserRound } from "lucide-react";
+import { Lock, Mail, ShieldCheck, Sparkles, User, UserRound } from "lucide-react";
 import AuthLayout from "../components/AuthLayout";
 import { useAuth } from "../auth";
 
@@ -74,6 +74,10 @@ function Login() {
           <ShieldCheck size={16} /> Admin
         </button>
       </div>
+
+      <span className="auth-icon" aria-hidden="true">
+        <Sparkles size={23} />
+      </span>
 
       <h1>{isRegister ? "Create your account" : "Welcome back"}</h1>
 
