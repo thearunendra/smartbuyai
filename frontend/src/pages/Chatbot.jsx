@@ -235,8 +235,11 @@ function Chatbot() {
     inputRef.current?.focus();
   };
 
-  // Questions sent from the Home page arrive as ?q=... (asked once signed in).
+  // Wait for persisted authentication to resolve before choosing the
+  // signed-in or guest endpoint for a Home-page search.
   useEffect(() => {
+    if (checking) return;
+
     const question = searchParams.get("q");
 
     if (question && !askedFromUrl.current) {
@@ -245,7 +248,7 @@ function Chatbot() {
       searchProducts(question);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, checking]);
 
   const newChat = () => {
     if (loading) return;
