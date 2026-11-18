@@ -385,9 +385,9 @@
 
 .chat-shell {
   min-height: 0;
-  border: 1px solid #DCE8F2;
+  border: 1px solid var(--border);
   border-radius: 24px;
-  background: #FFFFFF;
+  background: var(--surface);
   box-shadow: 0 22px 60px rgba(20, 38, 61, 0.09), 0 3px 12px rgba(20, 38, 61, 0.035);
 }
 
@@ -401,8 +401,8 @@
   gap: 18px;
   min-height: 78px;
   padding: 14px 26px;
-  border-bottom: 1px solid #E4EDF5;
-  background: linear-gradient(100deg, #FFFFFF 0%, #F8FCFF 100%);
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(100deg, var(--surface) 0%, var(--surface-2) 100%);
 }
 
 .chat-topbar-identity {
@@ -431,7 +431,7 @@
 }
 
 .chat-topbar-identity strong {
-  color: #14263D;
+  color: var(--text);
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.25px;
@@ -439,7 +439,7 @@
 
 .chat-topbar-identity div > span {
   margin-top: 3px;
-  color: #6D7F91;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -449,9 +449,9 @@
   gap: 9px;
   min-height: 34px;
   padding: 7px 12px;
-  border: 1px solid #D8EAF7;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: #F1F9FE;
+  background: var(--primary-soft);
   color: #176B91;
   font-size: 10px;
   font-weight: 850;
@@ -469,7 +469,7 @@
 
 /* Main canvas */
 .chat-main {
-  background: #FFFFFF;
+  background: var(--surface-2);
 }
 
 .chat-messages {
@@ -477,7 +477,7 @@
   gap: 22px;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(56, 189, 248, 0.075), transparent 56%),
-    linear-gradient(180deg, #F8FBFE 0%, #F4F8FC 100%);
+    linear-gradient(180deg, var(--surface-2) 0%, var(--bg) 100%);
 }
 
 .chat-loading,
@@ -529,10 +529,10 @@
 }
 
 .msg-ai .msg-bubble {
-  border-color: #E0EAF2;
+  border-color: var(--border);
   border-radius: 5px 18px 18px 18px;
-  background: #FFFFFF;
-  color: #263B50;
+  background: var(--surface);
+  color: var(--text);
   box-shadow: 0 5px 16px rgba(20, 38, 61, 0.035);
 }
 
@@ -557,11 +557,11 @@
   max-width: 790px;
   margin: auto;
   padding: 38px clamp(18px, 3vw, 42px) 34px;
-  border: 1px solid rgba(213, 230, 243, 0.92);
+  border: 1px solid var(--border-strong);
   border-radius: 28px;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(56, 189, 248, 0.105), transparent 56%),
-    linear-gradient(145deg, #FFFFFF 0%, #F8FCFF 100%);
+    linear-gradient(145deg, var(--surface) 0%, var(--surface-2) 100%);
   box-shadow: 0 20px 52px rgba(20, 38, 61, 0.075), 0 3px 10px rgba(20, 38, 61, 0.025);
   text-align: center;
   overflow: hidden;
@@ -593,7 +593,7 @@
   z-index: 1;
   width: 72px;
   height: 72px;
-  border: 5px solid #FFFFFF;
+  border: 5px solid var(--surface);
   border-radius: 23px;
   background: linear-gradient(145deg, #14263D 0%, #245073 70%, #38BDF8 100%);
   box-shadow: 0 13px 28px rgba(20, 38, 61, 0.18), 0 0 0 8px rgba(56, 189, 248, 0.09);
@@ -647,7 +647,7 @@
   padding: 8px 9px;
   border: 1px solid #E1ECF5;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.82);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   color: #546A80;
   font-size: 11px;
   font-weight: 650;
@@ -691,8 +691,8 @@
   padding: 13px 15px;
   border-color: #DFEAF3;
   border-radius: 15px;
-  background: #FFFFFF;
-  color: #2A4056;
+  background: var(--surface);
+  color: var(--text);
   font-size: 13px;
   font-weight: 650;
   line-height: 1.45;
@@ -707,7 +707,7 @@
 
 .welcome-suggestions button:hover {
   border-color: #77CFF5;
-  background: #F4FAFE;
+  background: var(--primary-soft);
   box-shadow: 0 10px 22px rgba(20, 38, 61, 0.07);
   transform: translateY(-2px);
 }
@@ -715,8 +715,8 @@
 /* Composer */
 .chat-composer-area {
   padding: 14px clamp(16px, 2.5vw, 34px) 10px;
-  border-top: 1px solid #E3ECF4;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F9FCFF 100%);
+  border-top: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
 }
 
 .chat-composer {
@@ -726,9 +726,9 @@
   width: min(100%, 1320px);
   margin: 0 auto;
   padding: 9px 10px 9px 13px;
-  border: 1px solid #D8E5F0;
+  border: 1px solid var(--border-strong);
   border-radius: 19px;
-  background: #FFFFFF;
+  background: var(--surface);
   box-shadow: 0 8px 26px rgba(20, 38, 61, 0.075), 0 2px 6px rgba(20, 38, 61, 0.025);
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
@@ -744,7 +744,7 @@
   border: none;
   border-radius: 12px;
   background: transparent;
-  color: #14263D;
+  color: var(--text);
   font-size: 15px;
   font-weight: 500;
 }
@@ -755,7 +755,7 @@
 }
 
 .chat-composer input::placeholder {
-  color: #93A3B3;
+  color: var(--text-subtle);
   font-weight: 400;
 }
 
@@ -764,7 +764,7 @@
   height: 46px;
   border-radius: 13px;
   color: #526A81;
-  background: #F1F7FC;
+  background: var(--primary-soft);
 }
 
 .composer-send {
@@ -806,9 +806,9 @@
   justify-content: center;
   width: 17px;
   height: 17px;
-  border: 1px solid #DDE8F1;
+  border: 1px solid var(--border);
   border-radius: 5px;
-  background: #FFFFFF;
+  background: var(--surface);
   color: #536D85;
   font-size: 11px;
   font-weight: 800;
