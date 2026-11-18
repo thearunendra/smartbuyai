@@ -166,8 +166,14 @@ describe("GET /api/products", () => {
     const calls = fetchMock.mock.calls.length;
     const second = await request(app).get("/api/products?category=Spaceships");
 
-    expect(second.body).toEqual(first.body);
-    expect(fetchMock.mock.calls.length).toBe(calls);
+    expect(second.body).toMatchObject({
+      category: "Smartphones",
+      query: "best 5g smartphone",
+      products: first.body.products
+    });
+    // The Shopping search is cached; only background comparison lookups may
+    // continue after the immediate listing response.
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(calls);
   });
 
   test("a search text replaces the category's query", async () => {
@@ -278,7 +284,12 @@ describe("errors, CORS and health", () => {
     expect(live.status).toBe(200);
     expect(live.body).toEqual({ ok: true });
     expect(ready.status).toBe(200);
-    expect(ready.body).toEqual({ ok: true, database: "connected" });
+    expect(ready.body).toMatchObject({ ok: true, database: "connected" });
+    expect(ready.body.providers).toMatchObject({
+      geminiConfigured: true,
+      serperConfigured: true
+    });
+    expect(ready.body).toHaveProperty("cache");
   });
 
   test("invalid JSON answers 400", async () => {
