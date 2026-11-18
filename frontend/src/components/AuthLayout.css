@@ -77,26 +77,114 @@
 }
 
 .auth-logo {
+  position: relative;
   display: inline-flex;
   align-items: center;
   align-self: flex-start;
-  gap: 11px;
+  gap: 17px;
+  min-height: 76px;
   color: #FFFFFF;
-  font-size: 19px;
+  text-decoration: none;
+}
+
+.auth-logo-emblem {
+  position: relative;
+  isolation: isolate;
+  width: 70px;
+  height: 70px;
+  flex: 0 0 70px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(164, 229, 255, 0.62);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 28% 20%, rgba(116, 230, 255, 0.42), transparent 42%),
+    linear-gradient(145deg, #1687B9 0%, #07517E 48%, #102B59 100%);
+  color: #E7FAFF;
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.25),
+    0 0 0 5px rgba(65, 190, 236, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.auth-logo-emblem::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -8px;
+  border: 1px solid rgba(117, 217, 250, 0.24);
+  border-radius: 27px;
+  transform: rotate(-8deg);
+}
+
+.auth-logo-emblem::after {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  inset: -15px;
+  border-radius: 30px;
+  background: rgba(40, 164, 221, 0.13);
+  filter: blur(13px);
+}
+
+.auth-logo-bag {
+  filter: drop-shadow(0 3px 5px rgba(2, 28, 51, 0.35));
+}
+
+.auth-logo-spark {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(202, 246, 255, 0.82);
+  border-radius: 10px;
+  background: linear-gradient(145deg, #76E4FF, #25A9DE);
+  color: #07325A;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22);
+}
+
+.auth-logo-type {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-logo-wordmark {
+  color: #FFFFFF;
+  font-size: clamp(29px, 2.5vw, 36px);
+  line-height: 0.98;
+  font-weight: 850;
+  letter-spacing: -1.55px;
+  white-space: nowrap;
+  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.18);
+}
+
+.auth-logo-wordmark > span {
+  margin-left: 5px;
+  color: #79DFFF;
+  background: linear-gradient(110deg, #B6F4FF 0%, #62D8FF 48%, #2EADEB 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.auth-logo-tagline {
+  color: rgba(198, 231, 248, 0.76);
+  font-size: 9px;
+  line-height: 1.2;
   font-weight: 800;
-  letter-spacing: -0.45px;
+  letter-spacing: 1.55px;
 }
 
-.auth-logo b {
-  color: #83D8FA;
-}
-
-.auth-logo .logo-mark {
-  width: 38px;
-  height: 38px;
-  border: 1px solid rgba(207, 237, 251, 0.22);
-  background: linear-gradient(145deg, #1A6B98, #123C65);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.20);
+.auth-logo:hover .auth-logo-emblem {
+  transform: translateY(-2px) rotate(-2deg);
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.30),
+    0 0 0 6px rgba(65, 190, 236, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
 }
 
 .auth-brand-content {
@@ -694,12 +782,42 @@
   }
 
   .auth-logo {
-    font-size: 17px;
+    gap: 13px;
+    min-height: 58px;
   }
 
-  .auth-logo .logo-mark {
-    width: 34px;
-    height: 34px;
+  .auth-logo-emblem {
+    width: 54px;
+    height: 54px;
+    flex-basis: 54px;
+    border-radius: 17px;
+  }
+
+  .auth-logo-bag {
+    width: 25px;
+    height: 25px;
+  }
+
+  .auth-logo-spark {
+    width: 22px;
+    height: 22px;
+    top: -6px;
+    right: -6px;
+  }
+
+  .auth-logo-spark svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .auth-logo-wordmark {
+    font-size: 27px;
+    letter-spacing: -1.15px;
+  }
+
+  .auth-logo-tagline {
+    font-size: 8px;
+    letter-spacing: 1.1px;
   }
 
   .auth-brand-content {
