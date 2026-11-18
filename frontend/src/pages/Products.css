@@ -551,3 +551,16 @@
     gap: 6px;
   }
 }
+
+
+.products-comparison-warning {
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  border: 1px solid #F1D6A8;
+  border-radius: 12px;
+  background: #FFFAF0;
+  color: #875B19;
+  font-size: 12px;
+  line-height: 1.55;
+}
