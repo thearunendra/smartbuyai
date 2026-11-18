@@ -169,26 +169,12 @@ describe('Products', () => {
     expect(screen.getByRole('status')).toHaveTextContent('up to 4 products')
   })
 
-  test('shows product cards before the background store comparison finishes', async () => {
-    fetchMock
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          products: listings,
-          comparisonComplete: false,
-          comparisonStatus: 'pending'
-        })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          products: listings,
-          comparisonComplete: true,
-          comparisonStatus: 'complete'
-        })
-      })
+  test('shows product cards immediately without a background status banner', async () => {
+    respond({
+      products: listings,
+      comparisonComplete: false,
+      comparisonStatus: 'pending'
+    })
 
     renderProducts()
 
@@ -196,9 +182,7 @@ describe('Products', () => {
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3)
     expect(screen.queryByText(/comparing store offers in the background/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Your products are ready/i)).not.toBeInTheDocument()
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2), { timeout: 10000 })
-    expect(screen.queryByText(/comparing store offers in the background/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   test('warns when store comparison is incomplete', async () => {
