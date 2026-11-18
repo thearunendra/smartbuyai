@@ -26,7 +26,11 @@ const GEMINI_MODEL =
 
 // Serper keys, tried in order: the spare takes over for the rest of the
 // process once the one in use runs out of credits.
-const SERPER_API_KEYS = [process.env.SERPER_API_KEY, process.env.SERPER_API_KEY_2]
+const SERPER_API_KEYS = [
+  process.env.SERPER_API_KEY,
+  process.env.SERPER_API_KEY_2,
+  process.env.SERPER_API_KEY_3
+]
   .map((key) => (typeof key === "string" ? key.trim() : ""))
   .filter(Boolean);
 
