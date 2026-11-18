@@ -112,7 +112,7 @@ function Products() {
         // Fast listings are already on screen. Poll quietly for richer
         // cross-store offers instead of keeping the entire grid skeletonized.
         if (data.comparisonStatus === "pending") {
-          refreshTimer = setTimeout(loadProducts, 2500);
+          refreshTimer = setTimeout(loadProducts, 7000);
         }
       } catch (error) {
         if (ignore || controller.signal.aborted) return;
