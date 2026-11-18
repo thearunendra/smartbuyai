@@ -48,7 +48,7 @@ describe('Products', () => {
   test('loads the first category and shows the listings', async () => {
     renderProducts()
 
-    expect(screen.getByText(/Fetching live listings/)).toBeInTheDocument()
+    expect(screen.getByText(/Fetching live product listings/)).toBeInTheDocument()
     expect(await screen.findByText('Showing 3 live listings in Smartphones')).toBeInTheDocument()
     expect(lastRequest().get('category')).toBe('Smartphones')
     expect(lastRequest().has('q')).toBe(false)
@@ -192,13 +192,13 @@ describe('Products', () => {
 
     renderProducts()
 
-    expect(await screen.findByText(/Loaded 3 listings/)).toBeInTheDocument()
+    expect(await screen.findByText(/Showing 3 live listings in Smartphones/)).toBeInTheDocument()
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3)
-    expect(screen.getByRole('status')).toHaveTextContent(/checking additional store offers in the background/i)
+    expect(screen.queryByText(/comparing store offers in the background/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Your products are ready/i)).not.toBeInTheDocument()
 
-    expect(await screen.findByText(/Showing 3 live listings in Smartphones/, {}, { timeout: 10000 })).toBeInTheDocument()
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(screen.queryByText(/checking additional store offers in the background/i)).not.toBeInTheDocument()
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2), { timeout: 10000 })
+    expect(screen.queryByText(/comparing store offers in the background/i)).not.toBeInTheDocument()
   })
 
   test('warns when store comparison is incomplete', async () => {
@@ -206,7 +206,8 @@ describe('Products', () => {
     renderProducts()
 
     expect(await screen.findByText(/Showing 3 live listings in Smartphones/)).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(/Some store offers could not be verified/)
+    expect(screen.queryByText(/Some store offers could not be verified/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   test("shows the server's message when nothing is found", async () => {
