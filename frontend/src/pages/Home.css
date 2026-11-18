@@ -27,7 +27,7 @@
   inset: 0;
   background:
     radial-gradient(55% 70% at 8% 10%, rgba(20, 38, 61, 0.2), transparent 72%),
-    radial-gradient(50% 60% at 95% 5%, rgba(183, 154, 108, 0.16), transparent 68%),
+    radial-gradient(50% 60% at 95% 5%, rgba(56, 189, 248, 0.14), transparent 68%),
     radial-gradient(40% 55% at 70% 100%, rgba(56, 189, 248, 0.12), transparent 72%);
 }
 
@@ -60,8 +60,8 @@
 .hero-orb-two {
   right: -230px;
   bottom: -190px;
-  border: 1px solid rgba(183, 154, 108, 0.5);
-  box-shadow: 0 0 100px rgba(183, 154, 108, 0.2), inset 0 0 80px rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.34);
+  box-shadow: 0 0 100px rgba(56, 189, 248, 0.14), inset 0 0 80px rgba(56, 189, 248, 0.12);
 }
 
 .hero-beam {
@@ -70,7 +70,7 @@
   right: 0;
   bottom: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(20, 38, 61, 0.55) 30%, rgba(183, 154, 108, 0.5) 70%, transparent);
+  background: linear-gradient(90deg, transparent, rgba(20, 38, 61, 0.55) 30%, rgba(56, 189, 248, 0.34) 70%, transparent);
 }
 
 .hero-grid {
@@ -154,7 +154,7 @@
   background: var(--accent);
   border-color: var(--accent);
   color: #ffffff;
-  box-shadow: 0 8px 18px rgba(183, 154, 108, 0.2);
+  box-shadow: 0 8px 18px rgba(56, 189, 248, 0.14);
 }
 
 .hero-search .btn:hover:not(:disabled) {
@@ -1358,7 +1358,7 @@
   border-radius: 14px;
   background: var(--gradient);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(183, 154, 108, 0.2);
+  box-shadow: 0 8px 20px rgba(56, 189, 248, 0.14);
 }
 
 .decision-hub-brand div > span,
@@ -1684,7 +1684,7 @@
 
 .hero-voice-btn {
   color: var(--accent);
-  background: #f7f2e9;
+  background: #EAF1F7;
   border-color: #D5EAF8;
 }
 
@@ -1706,12 +1706,12 @@
 .hero-chips button:hover {
   color: #14577A;
   border-color: #7CCEF2;
-  background: #fcfaf6;
+  background: #E9F2F8;
 }
 
 .hero-preview {
   background: color-mix(in srgb, var(--surface) 97%, transparent);
-  border-color: #e4dccf;
+  border-color: #C8D8E6;
   box-shadow: 0 28px 68px rgba(20, 38, 61, 0.12), 0 5px 16px rgba(20, 38, 61, 0.05);
 }
 
@@ -1754,7 +1754,7 @@
 
 .decision-detail {
   background: linear-gradient(130deg, #14263D 0%, #203A55 100%);
-  border-color: rgba(183, 154, 108, 0.34);
+  border-color: rgba(56, 189, 248, 0.34);
 }
 
 .decision-detail-number {
@@ -1808,7 +1808,7 @@
 
 .cta-card {
   background: linear-gradient(130deg, #14263D 0%, #245073 100%);
-  border: 1px solid rgba(183, 154, 108, 0.34);
+  border: 1px solid rgba(56, 189, 248, 0.34);
   box-shadow: 0 22px 48px rgba(20, 38, 61, 0.16);
 }
 
@@ -2324,7 +2324,7 @@
   padding: 23px;
   border-radius: 20px;
   box-shadow: 0 5px 18px rgba(20, 38, 61, 0.04);
-  background: linear-gradient(155deg, #FFFFFF 0%, #F8FBFE 100%);
+  background: linear-gradient(155deg, var(--surface) 0%, var(--surface-2) 100%);
 }
 
 .intent-card-top {
