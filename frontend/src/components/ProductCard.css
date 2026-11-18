@@ -217,9 +217,9 @@
   justify-content: center;
   width: 39px;
   height: 39px;
-  border: 1px solid #DCEAF5;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(244, 247, 250, 0.98);
   color: #526C82;
   box-shadow: 0 5px 14px rgba(20, 38, 61, 0.10);
   cursor: pointer;
