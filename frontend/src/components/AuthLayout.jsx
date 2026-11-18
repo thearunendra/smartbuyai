@@ -27,11 +27,17 @@ function AuthLayout({ children }) {
         <div className="auth-brand-glow" aria-hidden="true" />
         <div className="auth-brand-grid" aria-hidden="true" />
 
-        <Link to="/" className="auth-logo">
-          <span className="logo-mark">
-            <Sparkles size={18} />
+        <Link to="/" className="auth-logo" aria-label="SmartBuy AI home">
+          <span className="auth-logo-emblem" aria-hidden="true">
+            <ShoppingBag className="auth-logo-bag" size={31} strokeWidth={2.1} />
+            <span className="auth-logo-spark">
+              <Sparkles size={16} strokeWidth={2.4} />
+            </span>
           </span>
-          <span>SmartBuy <b>AI</b></span>
+          <span className="auth-logo-type">
+            <span className="auth-logo-wordmark">SmartBuy<span>AI</span></span>
+            <span className="auth-logo-tagline">INTELLIGENT SHOPPING, SIMPLIFIED</span>
+          </span>
         </Link>
 
         <div className="auth-brand-content">
