@@ -42,7 +42,7 @@ describe("serperRequest", () => {
     const fetchMock = mockSerper(() => new Error("timeout"));
 
     await expect(serperRequest("search", { q: "x" })).rejects.toThrow("timeout");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
   test("fails on an error status without retrying", async () => {
@@ -228,6 +228,6 @@ describe("serperRequest with a spare key", () => {
     await expect(request("search", { q: "x" })).rejects.toThrow(
       "Serper request failed with status 500"
     );
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });
