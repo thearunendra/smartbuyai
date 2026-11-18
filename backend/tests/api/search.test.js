@@ -163,17 +163,21 @@ describe("GET /api/products", () => {
     expect(first.status).toBe(200);
     expect(first.body).toMatchObject({ category: "Smartphones", query: "best 5g smartphone", count: 1 });
 
-    const calls = fetchMock.mock.calls.length;
+    const firstNames = first.body.products.map((product) => product.name);
     const second = await request(app).get("/api/products?category=Spaceships");
 
     expect(second.body).toMatchObject({
       category: "Smartphones",
-      query: "best 5g smartphone",
-      products: first.body.products
+      query: "best 5g smartphone"
     });
-    // The Shopping search is cached; only background comparison lookups may
-    // continue after the immediate listing response.
-    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(calls);
+    expect(second.body.products.map((product) => product.name)).toEqual(firstNames);
+
+    // A second frontend poll must reuse the in-flight payload and must not
+    // launch another Google Shopping request while store offers are enriched.
+    const shoppingCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes("google.serper.dev/shopping")
+    );
+    expect(shoppingCalls).toHaveLength(1);
   });
 
   test("a search text replaces the category's query", async () => {
