@@ -20,7 +20,11 @@ const listings = [
 let fetchMock
 
 function respond(body) {
-  fetchMock.mockResolvedValue({ json: async () => body })
+  fetchMock.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => body
+  })
 }
 
 function renderProducts(url = '/products') {
@@ -163,6 +167,14 @@ describe('Products', () => {
     buttons.slice(0, 5).forEach((button) => fireEvent.click(button))
 
     expect(screen.getByRole('status')).toHaveTextContent('up to 4 products')
+  })
+
+  test('warns when store comparison is incomplete', async () => {
+    respond({ products: listings, comparisonComplete: false })
+    renderProducts()
+
+    expect(await screen.findByText(/Showing 3 live listings in Smartphones/)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/Some store offers could not be verified/)
   })
 
   test("shows the server's message when nothing is found", async () => {
