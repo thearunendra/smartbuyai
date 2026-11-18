@@ -194,6 +194,7 @@ describe("GET /api/products", () => {
       };
     });
 
+    const query = unique("Croma Match Phone");
     geminiReply({ indexes: [0] });
     geminiReply({
       products: [{
@@ -202,7 +203,9 @@ describe("GET /api/products", () => {
       }]
     });
 
-    const response = await request(app).get("/api/products?category=Smartphones");
+    const response = await request(app).get(
+      `/api/products?category=Smartphones&q=${encodeURIComponent(query)}`
+    );
 
     expect(response.status).toBe(200);
     expect(response.body.comparisonStatus).toBe("complete");
