@@ -57,8 +57,8 @@ function Where() {
   return <p data-testid="path">{location.pathname + location.search}</p>
 }
 
-function renderChat(url = '/chatbot') {
-  return render(
+function chatTree(url = '/chatbot') {
+  return (
     <MemoryRouter initialEntries={[url]}>
       <Routes>
         <Route path="/chatbot" element={<><Chatbot /><Where /></>} />
@@ -67,6 +67,10 @@ function renderChat(url = '/chatbot') {
       </Routes>
     </MemoryRouter>
   )
+}
+
+function renderChat(url = '/chatbot') {
+  return render(chatTree(url))
 }
 
 const input = () => screen.getByPlaceholderText(/Gaming laptop/)
@@ -114,6 +118,25 @@ describe('access', () => {
 })
 
 describe('asking', () => {
+  test('waits for saved authentication before sending a Home-page search', async () => {
+    let authState = { user: null, checking: true }
+    useAuth.mockImplementation(() => authState)
+    const view = render(chatTree('/chatbot?q=laptop%20under%2060k'))
+
+    expect(api.mock.calls.some(([path]) => path === '/api/search' || path === '/api/search/guest')).toBe(false)
+
+    authState = { user: { name: 'Asha' }, checking: false }
+    await act(async () => {
+      view.rerender(chatTree('/chatbot?q=laptop%20under%2060k'))
+    })
+
+    expect(await screen.findByText('Try these.')).toBeInTheDocument()
+    expect(api).toHaveBeenCalledWith('/api/search', {
+      method: 'POST',
+      body: { query: 'laptop under 60k', conversationId: undefined }
+    })
+  })
+
   test('shows the upgraded assistant workspace header and welcome prompts', () => {
     renderChat()
 
