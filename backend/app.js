@@ -1063,7 +1063,7 @@ function exactMerchantPageMatch(productName, page) {
   return (
     available.has(brandToken) &&
     coverage >= 0.75 &&
-    (numberTokens.length === 0 || numberMatches / numberTokens.length >= 0.6)
+    (numberTokens.length === 0 || numberMatches === numberTokens.length)
   );
 }
 
