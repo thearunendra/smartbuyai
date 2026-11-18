@@ -2541,3 +2541,141 @@
     font-size: 12px;
   }
 }
+
+
+/* =====================================================
+   DARK MODE — HOMEPAGE CONTRAST FIX
+   Keep all card text readable on the midnight navy canvas.
+   ===================================================== */
+
+:root[data-theme="dark"] .trust-item,
+:root[data-theme="dark"] .popular-card,
+:root[data-theme="dark"] .category-card,
+:root[data-theme="dark"] .feature-card,
+:root[data-theme="dark"] .intent-card {
+  color: #F4F8FC;
+  background: linear-gradient(145deg, #182B40 0%, #203A53 100%);
+  border-color: #36536D;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.18);
+}
+
+:root[data-theme="dark"] .category-card {
+  background: linear-gradient(145deg, #182B40 0%, #203A53 100%);
+}
+
+:root[data-theme="dark"] .trust-item strong,
+:root[data-theme="dark"] .popular-copy strong,
+:root[data-theme="dark"] .category-card h3,
+:root[data-theme="dark"] .feature-card h3,
+:root[data-theme="dark"] .intent-card > strong,
+:root[data-theme="dark"] .preview-brand strong,
+:root[data-theme="dark"] .preview-plan strong,
+:root[data-theme="dark"] .decision-hub-brand div > strong,
+:root[data-theme="dark"] .decision-step-copy strong,
+:root[data-theme="dark"] .section-heading h2 {
+  color: #F4F8FC;
+}
+
+:root[data-theme="dark"] .trust-item small,
+:root[data-theme="dark"] .popular-copy small,
+:root[data-theme="dark"] .category-card p,
+:root[data-theme="dark"] .feature-card p,
+:root[data-theme="dark"] .intent-card > p,
+:root[data-theme="dark"] .preview-brand div > span,
+:root[data-theme="dark"] .preview-plan span,
+:root[data-theme="dark"] .section-heading p,
+:root[data-theme="dark"] .category-total,
+:root[data-theme="dark"] .hero-search-hint,
+:root[data-theme="dark"] .hero-stats span {
+  color: #B9C8D6;
+}
+
+:root[data-theme="dark"] .trust-arrow,
+:root[data-theme="dark"] .popular-arrow,
+:root[data-theme="dark"] .category-action,
+:root[data-theme="dark"] .text-link,
+:root[data-theme="dark"] .cta-secondary,
+:root[data-theme="dark"] .feature-link,
+:root[data-theme="dark"] .intent-action,
+:root[data-theme="dark"] .intent-arrow {
+  color: #7DD3FC;
+}
+
+:root[data-theme="dark"] .trust-icon,
+:root[data-theme="dark"] .popular-icon,
+:root[data-theme="dark"] .category-icon,
+:root[data-theme="dark"] .feature-icon,
+:root[data-theme="dark"] .intent-icon,
+:root[data-theme="dark"] .preview-result-icon {
+  background: rgba(56, 189, 248, 0.14);
+  color: #7DD3FC;
+}
+
+:root[data-theme="dark"] .category-action {
+  border-color: #48647E;
+}
+
+:root[data-theme="dark"] .category-total {
+  border-color: #48647E;
+  background: #13243A;
+}
+
+:root[data-theme="dark"] .section-heading > div > span,
+:root[data-theme="dark"] .section-heading > span:first-child,
+:root[data-theme="dark"] .hero-badge {
+  color: #BAE6FD;
+  border-color: #36536D;
+  background: rgba(56, 189, 248, 0.12);
+}
+
+:root[data-theme="dark"] .trust-item:hover,
+:root[data-theme="dark"] .popular-card:hover,
+:root[data-theme="dark"] .category-card:hover,
+:root[data-theme="dark"] .feature-card:hover,
+:root[data-theme="dark"] .intent-card:hover {
+  border-color: #38BDF8;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(56, 189, 248, 0.12);
+}
+
+:root[data-theme="dark"] .decision-hub {
+  border-color: #36536D;
+  background: linear-gradient(145deg, #182B40 0%, #203A53 100%);
+}
+
+:root[data-theme="dark"] .decision-hub-intro h2,
+:root[data-theme="dark"] .decision-step,
+:root[data-theme="dark"] .decision-step-copy strong {
+  color: #F4F8FC;
+}
+
+:root[data-theme="dark"] .decision-step {
+  border-color: #36536D;
+  background: #1D354D;
+}
+
+:root[data-theme="dark"] .decision-step.is-active {
+  border-color: #38BDF8;
+  background: rgba(56, 189, 248, 0.14);
+}
+
+:root[data-theme="dark"] .decision-hub-intro h2 em,
+:root[data-theme="dark"] .decision-hub-brand div > span,
+:root[data-theme="dark"] .decision-hub-intro > span,
+:root[data-theme="dark"] .decision-step-copy small,
+:root[data-theme="dark"] .decision-hub-footer > span:last-child {
+  color: #7DD3FC;
+}
+
+:root[data-theme="dark"] .preview-result {
+  border-color: #36536D;
+  background: #1D354D;
+  color: #F4F8FC;
+}
+
+:root[data-theme="dark"] .preview-result strong {
+  color: #F4F8FC;
+}
+
+:root[data-theme="dark"] .preview-result > span:nth-last-child(2) {
+  color: #B9C8D6;
+}
