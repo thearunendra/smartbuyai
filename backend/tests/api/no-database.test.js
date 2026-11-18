@@ -15,7 +15,9 @@ test("readiness fails while MongoDB is disconnected", async () => {
   const response = await request(app).get("/api/health/ready");
 
   expect(response.status).toBe(503);
-  expect(response.body).toEqual({ ok: false, database: "disconnected" });
+  expect(response.body).toMatchObject({ ok: false, database: "disconnected" });
+  expect(response.body).toHaveProperty("providers");
+  expect(response.body).toHaveProperty("cache");
 });
 
 test("the legacy health endpoint still reports database status", async () => {
