@@ -196,13 +196,13 @@
 /* Premium chat history panel */
 .chat-sidebar {
   width: 292px;
-  background: linear-gradient(180deg, #FFFFFF 0%, #F8FBFE 100%);
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
   border-right-color: #E2EBF3;
 }
 
 .sidebar-top {
   padding: 17px 15px;
-  background: rgba(255, 255, 255, 0.88);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
 }
 
 .sidebar-new {
@@ -222,7 +222,7 @@
 
 .sidebar-group-label {
   padding: 7px 11px 8px;
-  color: #8193A5;
+  color: var(--text-subtle);
   font-size: 10px;
   font-weight: 850;
   letter-spacing: 0.9px;
@@ -236,15 +236,15 @@
 }
 
 .sidebar-item.active {
-  border-color: #D7EAF7;
-  background: #EAF5FD;
+  border-color: var(--border-strong);
+  background: var(--primary-soft);
   box-shadow: inset 3px 0 0 #38BDF8;
 }
 
 .sidebar-open {
   gap: 10px;
   padding: 10px 11px;
-  color: #60758A;
+  color: var(--text-muted);
   font-size: 13px;
   line-height: 1.35;
 }
@@ -260,7 +260,7 @@
 }
 
 .sidebar-item.active .sidebar-open {
-  color: #14263D;
+  color: var(--text);
   font-weight: 750;
 }
 
