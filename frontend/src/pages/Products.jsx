@@ -4,7 +4,6 @@ import { ArrowUpDown, Check, PackageSearch, Search, SlidersHorizontal, X } from 
 import Navbar from "../components/Navbar";
 import ProductCard, { ProductCardSkeleton } from "../components/ProductCard";
 import CategoryTabs from "../components/CategoryTabs";
-import { API_URL } from "../config";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import {
@@ -89,33 +88,39 @@ function Products() {
 
   useEffect(() => {
     let ignore = false;
+    const controller = new AbortController();
 
-    fetch(`${API_URL}/api/products?${requestKey}`)
-      .then((response) => response.json())
+    api(`/api/products?${requestKey}`, {
+      signal: controller.signal,
+      timeoutMs: 45_000
+    })
       .then((data) => {
         if (!ignore) {
           setResult({
             key: requestKey,
             products: data.products || [],
             checkedAt: data.checkedAt || null,
+            comparisonComplete: data.comparisonComplete,
             error: data.products?.length ? "" : data.message || ""
           });
         }
       })
       .catch((error) => {
-        console.log("Unable to load products:", error);
+        if (ignore || controller.signal.aborted) return;
+        console.warn("Unable to load products:", error);
 
-        if (!ignore) {
-          setResult({
-            key: requestKey,
-            products: [],
-            error: "Unable to connect to SmartBuy AI."
-          });
-        }
+        setResult({
+          key: requestKey,
+          products: [],
+          checkedAt: null,
+          comparisonComplete: false,
+          error: error.message || "Unable to connect to SmartBuy AI."
+        });
       });
 
     return () => {
       ignore = true;
+      controller.abort();
     };
   }, [requestKey]);
 
@@ -312,6 +317,12 @@ function Products() {
                 </span>
               )}
             </div>
+          )}
+
+          {!loading && result.comparisonComplete === false && (
+            <p className="products-comparison-warning" role="status">
+              Some store offers could not be verified just now. The listings are shown, but please confirm the final price on the retailer's website.
+            </p>
           )}
 
           <div className="products-controls">
