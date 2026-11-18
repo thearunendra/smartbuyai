@@ -8,6 +8,7 @@ const CACHE_TTL_SECONDS_BY_PREFIX = Object.freeze({
   pages: 15 * 60,
   offers: 15 * 60,
   page: 15 * 60,
+  "page-v2": 15 * 60,
   "answer-v2": 15 * 60,
   specs: 6 * 60 * 60,
   images: 24 * 60 * 60
