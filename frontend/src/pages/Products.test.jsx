@@ -48,7 +48,7 @@ describe('Products', () => {
   test('loads the first category and shows the listings', async () => {
     renderProducts()
 
-    expect(screen.getByText(/Fetching live product listings/)).toBeInTheDocument()
+    expect(screen.getByText(/Finding products and comparing store prices/)).toBeInTheDocument()
     expect(await screen.findByText('Showing 3 live listings in Smartphones')).toBeInTheDocument()
     expect(lastRequest().get('category')).toBe('Smartphones')
     expect(lastRequest().has('q')).toBe(false)
@@ -169,23 +169,33 @@ describe('Products', () => {
     expect(screen.getByRole('status')).toHaveTextContent('up to 4 products')
   })
 
-  test('shows product cards immediately without a background status banner', async () => {
+  test('shows store comparison rows as soon as the catalogue response renders', async () => {
+    const comparedListings = [
+      {
+        ...listings[0],
+        offers: [
+          { store: 'Flipkart', price: 19000, link: 'https://www.flipkart.com/phone-a' },
+          { store: 'Amazon', price: 20000, link: null }
+        ]
+      },
+      ...listings.slice(1)
+    ];
     respond({
-      products: listings,
-      comparisonComplete: false,
-      comparisonStatus: 'pending'
+      products: comparedListings,
+      comparisonComplete: true,
+      comparisonStatus: 'complete'
     })
 
     renderProducts()
 
-    expect(await screen.findByText(/Showing 3 live listings in Smartphones/)).toBeInTheDocument()
-    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3)
+    expect(await screen.findByText('Compared across 2 stores')).toBeInTheDocument()
+    expect(screen.getByText('Flipkart')).toBeInTheDocument()
+    expect(screen.getByText('₹19,000')).toBeInTheDocument()
     expect(screen.queryByText(/comparing store offers in the background/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Your products are ready/i)).not.toBeInTheDocument()
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
-  test('warns when store comparison is incomplete', async () => {
+  test('keeps the product layout clean when some store comparisons are incomplete', async () => {
     respond({ products: listings, comparisonComplete: false })
     renderProducts()
 
