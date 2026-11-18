@@ -64,7 +64,7 @@ test('shopping goal cards open the AI assistant with a prepared brief', () => {
 test('the decision hub lets visitors explore each shopping step', () => {
   renderHome()
 
-  const discoverStep = screen.getByRole('button', { name: /02 Discover/ })
+  const discoverStep = screen.getByRole('button', { name: /02DiscoverRelevant products from stores/ })
   fireEvent.click(discoverStep)
 
   expect(discoverStep).toHaveAttribute('aria-pressed', 'true')
