@@ -1037,7 +1037,7 @@ function exactMerchantPageMatch(productName, page) {
 
   const productTokens = [...new Set(nameTokens(productName).filter(
     (token) => !OFFER_MATCH_STOP_WORDS.has(token) &&
-      (token.length >= 2 || /^\\d$/.test(token))
+      (token.length >= 2 || /^\d$/.test(token))
   ))];
 
   if (productTokens.length < 3) return false;
@@ -1054,7 +1054,7 @@ function exactMerchantPageMatch(productName, page) {
   const matched = productTokens.filter((token) => available.has(token));
   const brandToken = productTokens[0];
   const coverage = matched.length / productTokens.length;
-  const numberTokens = productTokens.filter((token) => /\\d/.test(token));
+  const numberTokens = productTokens.filter((token) => /\d/.test(token));
   const numberMatches = numberTokens.filter((token) => available.has(token)).length;
 
   // Conservative fallback: merchant title/path must identify the brand and
@@ -1069,7 +1069,7 @@ function exactMerchantPageMatch(productName, page) {
 
 function priceFromMerchantSnippet(snippet) {
   const matches = [...String(snippet || "").matchAll(
-    /(?:₹|\\bINR\\b|\\bRs\\.?\\s*)\\s*([0-9][0-9,]*(?:\\.\\d{1,2})?)/gi
+    /(?:₹|\bINR\b|\bRs\.?\s*)\s*([0-9][0-9,]*(?:\.\d{1,2})?)/gi
   )];
   const amounts = [...new Set(matches.map((match) => parsePrice(match[1])).filter(Boolean))];
 
