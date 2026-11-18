@@ -1744,7 +1744,7 @@ app.post("/api/search", requireDB, optionalAuth, requireAuth, searchLimiter, asy
 // immediately, then the page refreshes itself while richer comparisons run.
 const productPageLoads = new Map();
 
-async function loadCompleteProductPage({ pageKey, category, query }) {
+async function loadCompleteProductPage({ pageKey, category, filterLabel, query }) {
   const inFlight = productPageLoads.get(pageKey);
   if (inFlight) return inFlight;
 
@@ -1769,7 +1769,7 @@ async function loadCompleteProductPage({ pageKey, category, query }) {
     // Select the recommended products first, then enrich every card with its
     // retailer offers before the API returns. The frontend never renders a
     // basic listing card and later swaps it for a comparison card.
-    const curated = await filterListings(category, listings);
+    const curated = await filterListings(filterLabel || category, listings);
     const selectedProducts = curated.slice(0, PRODUCTS_PER_PAGE);
     const { products, complete } = await compareProducts(selectedProducts);
 
@@ -1827,7 +1827,8 @@ app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
   try {
     const payload = await loadCompleteProductPage({
       pageKey,
-      category: search || category,
+      category,
+      filterLabel: search || category,
       query
     });
 
