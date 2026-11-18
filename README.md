@@ -100,8 +100,10 @@ The repository includes a Render Blueprint in `render.yaml`.
 - Build command: `npm ci --omit=dev`
 - Start command: `npm start`
 - Health check: `/api/health/ready`
-- Configure `GEMINI_API_KEY`, `SERPER_API_KEY`, optional `SERPER_API_KEY_2`,
-  `MONGODB_URI`, `JWT_SECRET`, and `CORS_ORIGINS`.
+- Configure `GEMINI_API_KEY`, `SERPER_API_KEY`, optional `SERPER_API_KEY_2`
+  and `SERPER_API_KEY_3`, `MONGODB_URI`, `JWT_SECRET`, and `CORS_ORIGINS`.
+- Serper keys are tried in order; an exhausted or unauthorized key is skipped
+  and the next configured key is used automatically.
 - `MONGODB_DB` is optional; it defaults to `smartbuy`.
 - Configure the optional Upstash REST URL and token together to use the shared cache.
 
