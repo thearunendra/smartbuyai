@@ -12,7 +12,7 @@ test('the home page is served at /', () => {
   window.history.pushState({}, '', '/')
   render(<App />)
 
-  expect(screen.getByRole('heading', { level: 1, name: /best product/ })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1, name: /the right product/i })).toBeInTheDocument()
 })
 
 test('the sign-in page is served at /login', () => {
