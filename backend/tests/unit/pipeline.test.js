@@ -329,24 +329,29 @@ describe("compareProducts", () => {
     });
   });
 
-  test("a failed Gemini call marks it incomplete and caches nothing", async () => {
+  test("a failed Gemini extraction falls back to exact trusted retailer pages", async () => {
     mockSerper(() => ({
-      organic: [{ title: "Compare Speaker Three", link: "https://croma.com/s3" }]
+      organic: [{
+        title: "Compare Speaker Three",
+        link: "https://www.croma.com/s3",
+        snippet: "Compare Speaker Three"
+      }]
     }));
     geminiFails();
 
     const product = { name: "Compare Speaker Three", price: 1000, store: "Amazon" };
     const result = await compareProducts([product]);
 
-    expect(result.complete).toBe(false);
+    expect(result.complete).toBe(true);
     expect(result.products[0].offers).toEqual([
-      { store: "Amazon", price: 1000, link: null }
+      { store: "Amazon", price: 1000, link: null },
+      { store: "Croma", price: null, link: "https://www.croma.com/s3" }
     ]);
 
-    // Nothing was cached, so the next comparison asks Gemini again.
-    geminiReply({ products: [] });
+    // The deterministic fallback is cached, so a second comparison is served
+    // without another Gemini extraction attempt.
     await compareProducts([product]);
-    expect(generateContent).toHaveBeenCalledTimes(2);
+    expect(generateContent).toHaveBeenCalledTimes(3);
   });
 
   test("an offer with no price leaves the listing price in place", async () => {
