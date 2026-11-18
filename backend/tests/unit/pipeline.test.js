@@ -337,7 +337,9 @@ describe("compareProducts", () => {
         snippet: "Compare Speaker Three"
       }]
     }));
-    geminiFails();
+    geminiFails("503 UNAVAILABLE");
+    geminiFails("503 UNAVAILABLE");
+    geminiFails("503 UNAVAILABLE");
 
     const product = { name: "Compare Speaker Three", price: 1000, store: "Amazon" };
     const result = await compareProducts([product]);
