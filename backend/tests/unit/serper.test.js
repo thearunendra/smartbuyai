@@ -221,6 +221,38 @@ describe("serperRequest with a spare key", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  test("falls through the first two keys and succeeds with the third key", async () => {
+    const savedSecond = process.env.SERPER_API_KEY_2;
+    const savedThird = process.env.SERPER_API_KEY_3;
+    let request;
+
+    process.env.SERPER_API_KEY_2 = "second-serper-key";
+    process.env.SERPER_API_KEY_3 = "third-serper-key";
+    jest.isolateModules(() => {
+      request = require("../../app").internals.serperRequest;
+    });
+
+    if (savedSecond === undefined) delete process.env.SERPER_API_KEY_2;
+    else process.env.SERPER_API_KEY_2 = savedSecond;
+    if (savedThird === undefined) delete process.env.SERPER_API_KEY_3;
+    else process.env.SERPER_API_KEY_3 = savedThird;
+
+    let calls = 0;
+    const fetchMock = mockSerper(() => {
+      calls += 1;
+      if (calls < 3) return { ok: false, status: 403 };
+      return { organic: [{ title: "Third key result" }] };
+    });
+
+    await expect(request("search", { q: "x" })).resolves.toEqual({
+      organic: [{ title: "Third key result" }]
+    });
+
+    expect(keyOf(fetchMock, 0)).toBe("test-serper-key");
+    expect(keyOf(fetchMock, 1)).toBe("second-serper-key");
+    expect(keyOf(fetchMock, 2)).toBe("third-serper-key");
+  });
+
   test("another error status does not burn the spare", async () => {
     const request = withSpareKey();
     const fetchMock = mockSerper(() => ({ ok: false, status: 500 }));
