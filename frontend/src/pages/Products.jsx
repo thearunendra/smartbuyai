@@ -320,11 +320,9 @@ function Products() {
               <p className="products-count">
                 {loading
                   ? "Fetching live product listings..."
-                  : result.comparisonStatus === "pending"
-                    ? `Loaded ${sortedProducts.length} listings · Comparing store offers in the background...`
-                    : activeFilterCount
-                  ? `Showing ${filteredProducts.length} of ${sortedProducts.length} live listings in ${category}`
-                  : `Showing ${sortedProducts.length} live listings in ${category}`}
+                  : activeFilterCount
+                    ? `Showing ${filteredProducts.length} of ${sortedProducts.length} live listings in ${category}`
+                    : `Showing ${filteredProducts.length} live listings in ${category}`}
               </p>
               {!loading && result.checkedAt && (
                 <span className="prices-checked-at">
@@ -335,18 +333,6 @@ function Products() {
                 </span>
               )}
             </div>
-          )}
-
-          {!loading && result.comparisonStatus === "pending" && (
-            <p className="products-comparison-pending" role="status" aria-live="polite">
-              Your products are ready. SmartBuy AI is checking additional store offers in the background.
-            </p>
-          )}
-
-          {!loading && result.comparisonStatus !== "pending" && result.comparisonComplete === false && (
-            <p className="products-comparison-warning" role="status">
-              Some store offers could not be verified just now. The listings are shown, but please confirm the final price on the retailer's website.
-            </p>
           )}
 
           <div className="products-controls">
