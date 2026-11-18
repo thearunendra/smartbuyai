@@ -564,3 +564,16 @@
   font-size: 12px;
   line-height: 1.55;
 }
+
+
+.products-comparison-pending {
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  border: 1px solid #C7E2F2;
+  border-radius: 12px;
+  background: #F0F8FD;
+  color: #245D7B;
+  font-size: 12px;
+  line-height: 1.55;
+}
