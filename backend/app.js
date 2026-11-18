@@ -378,10 +378,16 @@ const ai = new GoogleGenAI({
 
 // The free tier allows 15 requests a minute for this model. Calls beyond
 // GEMINI_RPM in the last minute wait for a slot instead of failing.
-const GEMINI_RPM = Number(process.env.GEMINI_RPM) || 14;
+// Keep a small safety margin below the provider's free-tier request rate.
+// Every retry also reserves a slot, so recovery attempts respect the same limit.
+const GEMINI_RPM = Number(process.env.GEMINI_RPM) || 12;
+const MAX_GEMINI_RETRIES = 2;
 const geminiCalls = [];
 
-async function generate(params) {
+const pause = (milliseconds) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function reserveGeminiSlot() {
   for (;;) {
     const now = Date.now();
 
@@ -390,21 +396,44 @@ async function generate(params) {
     }
 
     if (geminiCalls.length < GEMINI_RPM) {
-      break;
+      geminiCalls.push(now);
+      return;
     }
 
-    await new Promise((resolve) =>
-      setTimeout(resolve, 60000 - (now - geminiCalls[0]) + 50)
-    );
+    await pause(60000 - (now - geminiCalls[0]) + 75);
   }
-
-  geminiCalls.push(Date.now());
-
-  return ai.models.generateContent({ model: GEMINI_MODEL, ...params });
 }
 
+function isTransientGeminiError(error) {
+  const status = Number(error?.status || error?.code || error?.response?.status);
+  return (
+    [408, 429, 500, 502, 503, 504].includes(status) ||
+    /UNAVAILABLE|RESOURCE_EXHAUSTED|high demand|temporarily unavailable|rate.?limit/i.test(
+      String(error?.message || "")
+    )
+  );
+}
 
-// =====================================================
+async function generate(params) {
+  for (let attempt = 0; ; attempt += 1) {
+    await reserveGeminiSlot();
+
+    try {
+      return await ai.models.generateContent({ model: GEMINI_MODEL, ...params });
+    } catch (error) {
+      if (!isTransientGeminiError(error) || attempt >= MAX_GEMINI_RETRIES) {
+        throw error;
+      }
+
+      const backoffMs = Math.min(5000, 750 * (2 ** attempt));
+      console.warn(
+        `Gemini temporarily unavailable; retrying in ${backoffMs}ms (attempt ${attempt + 1}/${MAX_GEMINI_RETRIES}).`
+      );
+      await pause(backoffMs);
+    }
+  }
+}
+
 // SEARCH LOG (ADMIN STATS)
 // =====================================================
 
@@ -476,6 +505,27 @@ function parsePrice(priceText) {
     : null;
 }
 
+// Serper permits up to five requests per second. Keep our process-wide
+// request start rate below that ceiling during multi-product searches.
+const SERPER_MIN_INTERVAL_MS = Number(process.env.SERPER_MIN_INTERVAL_MS) || 350;
+const MAX_SERPER_ATTEMPTS = 4;
+let serperNextSlotAt = 0;
+let serperSlotQueue = Promise.resolve();
+
+async function reserveSerperSlot() {
+  let release;
+  const previous = serperSlotQueue;
+  serperSlotQueue = new Promise((resolve) => { release = resolve; });
+  await previous;
+
+  const now = Date.now();
+  const slotAt = Math.max(now, serperNextSlotAt);
+  serperNextSlotAt = slotAt + SERPER_MIN_INTERVAL_MS;
+  release();
+
+  if (slotAt > now) await pause(slotAt - now);
+}
+
 // endpoint is "shopping" (2 credits), "search" or "images" (1 credit each).
 async function serperRequest(endpoint, body) {
   if (SERPER_API_KEYS.length === 0) {
@@ -489,63 +539,71 @@ async function serperRequest(endpoint, body) {
         "X-API-KEY": key,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        gl: "in",
-        hl: "en",
-        ...body
-      }),
+      body: JSON.stringify({ gl: "in", hl: "en", ...body }),
       signal: AbortSignal.timeout(8000)
     });
 
-  // The key in use, then the spare if this one is out of credits.
-  for (;;) {
-    let response;
+  for (let attempt = 0; attempt < MAX_SERPER_ATTEMPTS; attempt += 1) {
+    await reserveSerperSlot();
 
+    let response;
     try {
       response = await request(SERPER_API_KEYS[serperKeyIndex]);
     } catch (error) {
-      // Retry once on network errors (dropped connection or timeout).
-      response = await request(SERPER_API_KEYS[serperKeyIndex]);
+      if (attempt === MAX_SERPER_ATTEMPTS - 1) throw error;
+      const backoffMs = Math.min(3000, 500 * (2 ** attempt));
+      console.warn(`Serper network error; retrying in ${backoffMs}ms.`);
+      await pause(backoffMs);
+      continue;
     }
 
     if (response.ok) {
       return response.json();
     }
 
-    const hasSpare = serperKeyIndex + 1 < SERPER_API_KEYS.length;
-
-    // Preserve the provider's safe diagnostic message. Previously only the
-    // HTTP status was logged, making invalid-request responses impossible to
-    // distinguish from provider/account problems in production.
     const responseText = await response.text().catch(() => "");
     let providerMessage = "";
 
     if (responseText) {
       try {
-        const body = JSON.parse(responseText);
+        const parsed = JSON.parse(responseText);
         providerMessage =
-          body?.error?.message ||
-          body?.message ||
-          (typeof body?.error === "string" ? body.error : "") ||
+          parsed?.error?.message ||
+          parsed?.message ||
+          (typeof parsed?.error === "string" ? parsed.error : "") ||
           "";
       } catch {
         providerMessage = responseText;
       }
     }
 
-    const detail = String(providerMessage || "").replace(/\\s+/g, " ").slice(0, 300);
+    const detail = String(providerMessage || "").replace(/\s+/g, " ").slice(0, 300);
     const failure = `Serper request failed with status ${response.status}${detail ? `: ${detail}` : ""}`;
+    const hasSpare = serperKeyIndex + 1 < SERPER_API_KEYS.length;
 
-    if (!serperOutOfCredits(response.status, providerMessage) || !hasSpare) {
-      throw new Error(failure);
+    if (serperOutOfCredits(response.status, providerMessage) && hasSpare) {
+      console.warn(
+        `Serper key ${serperKeyIndex + 1} unavailable; switching to spare key ${serperKeyIndex + 2}.`
+      );
+      serperKeyIndex = Math.min(serperKeyIndex + 1, SERPER_API_KEYS.length - 1);
+      continue;
     }
 
-    console.log(
-      `Serper: key ${serperKeyIndex + 1} is out of credits (status ${response.status}), switching to key ${serperKeyIndex + 2}`
-    );
+    const transient = response.status === 429 || response.status >= 500;
+    if (transient && attempt < MAX_SERPER_ATTEMPTS - 1) {
+      const retryAfter = Number(response.headers?.get?.("retry-after"));
+      const backoffMs = Number.isFinite(retryAfter) && retryAfter > 0
+        ? Math.min(5000, retryAfter * 1000)
+        : Math.min(4000, 800 * (2 ** attempt));
+      console.warn(`Serper returned HTTP ${response.status}; retrying in ${backoffMs}ms.`);
+      await pause(backoffMs);
+      continue;
+    }
 
-    serperKeyIndex += 1;
+    throw new Error(failure);
   }
+
+  throw new Error("Serper request could not be completed after retries.");
 }
 
 // "amazon.in" -> "Amazon", "Mi.com" -> "Mi"
@@ -1287,10 +1345,15 @@ async function runSearch(query) {
 
   const { products: results, complete } = await compareProducts(answer.results);
 
+  const comparisonWarning = complete
+    ? ""
+    : " Some store-price checks could not be completed. Prices shown are based on listings currently verified; confirm the final price on the retailer's website.";
+
   const payload = {
     message: "Search completed successfully.",
-    reply: answer.reply,
+    reply: answer.reply + comparisonWarning,
     category: answer.category,
+    comparisonComplete: complete,
     count: results.length,
     results
   };
@@ -1450,9 +1513,13 @@ async function runMultiProductSearch(query, budget, intents, answerKey) {
     })
     .join(" ");
 
+  const comparisonWarning = complete
+    ? ""
+    : " Some store-price checks could not be completed. Prices shown are based on listings currently verified; confirm the final price on the retailer's website.";
+
   const payload = {
     message: "Search completed successfully.",
-    reply,
+    reply: reply + comparisonWarning,
     // Keep the existing single-category field useful for admin analytics.
     // A multi-category search is recorded as "Other".
     category: groupsWithResults.length === 1
@@ -1460,6 +1527,7 @@ async function runMultiProductSearch(query, budget, intents, answerKey) {
       : "Other",
     categories: intents.map((intent) => intent.category),
     missingCategories,
+    comparisonComplete: complete,
     count: results.length,
     results
   };
@@ -1593,6 +1661,7 @@ app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
       query,
       count: products.length,
       checkedAt: new Date().toISOString(),
+      comparisonComplete: complete,
       products
     };
 
