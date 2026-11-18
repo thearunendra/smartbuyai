@@ -88,24 +88,33 @@ function Products() {
 
   useEffect(() => {
     let ignore = false;
+    let refreshTimer;
     const controller = new AbortController();
 
-    api(`/api/products?${requestKey}`, {
-      signal: controller.signal,
-      timeoutMs: 45_000
-    })
-      .then((data) => {
-        if (!ignore) {
-          setResult({
-            key: requestKey,
-            products: data.products || [],
-            checkedAt: data.checkedAt || null,
-            comparisonComplete: data.comparisonComplete,
-            error: data.products?.length ? "" : data.message || ""
-          });
+    const loadProducts = async () => {
+      try {
+        const data = await api(`/api/products?${requestKey}`, {
+          signal: controller.signal,
+          timeoutMs: 45_000
+        });
+
+        if (ignore) return;
+
+        setResult({
+          key: requestKey,
+          products: data.products || [],
+          checkedAt: data.checkedAt || null,
+          comparisonComplete: data.comparisonComplete,
+          comparisonStatus: data.comparisonStatus || "complete",
+          error: data.products?.length ? "" : data.message || ""
+        });
+
+        // Fast listings are already on screen. Poll quietly for richer
+        // cross-store offers instead of keeping the entire grid skeletonized.
+        if (data.comparisonStatus === "pending") {
+          refreshTimer = setTimeout(loadProducts, 2500);
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         if (ignore || controller.signal.aborted) return;
         console.warn("Unable to load products:", error);
 
@@ -114,14 +123,19 @@ function Products() {
           products: [],
           checkedAt: null,
           comparisonComplete: false,
+          comparisonStatus: "error",
           error: error.status || error.name === "TimeoutError"
             ? error.message
             : "Unable to connect to SmartBuy AI."
         });
-      });
+      }
+    };
+
+    loadProducts();
 
     return () => {
       ignore = true;
+      clearTimeout(refreshTimer);
       controller.abort();
     };
   }, [requestKey]);
@@ -305,8 +319,10 @@ function Products() {
             <div className="products-count-block">
               <p className="products-count">
                 {loading
-                  ? "Fetching live listings and comparing prices across stores..."
-                  : activeFilterCount
+                  ? "Fetching live product listings..."
+                  : result.comparisonStatus === "pending"
+                    ? `Loaded ${sortedProducts.length} listings · Comparing store offers in the background...`
+                    : activeFilterCount
                   ? `Showing ${filteredProducts.length} of ${sortedProducts.length} live listings in ${category}`
                   : `Showing ${sortedProducts.length} live listings in ${category}`}
               </p>
@@ -321,7 +337,13 @@ function Products() {
             </div>
           )}
 
-          {!loading && result.comparisonComplete === false && (
+          {!loading && result.comparisonStatus === "pending" && (
+            <p className="products-comparison-pending" role="status" aria-live="polite">
+              Your products are ready. SmartBuy AI is checking additional store offers in the background.
+            </p>
+          )}
+
+          {!loading && result.comparisonStatus !== "pending" && result.comparisonComplete === false && (
             <p className="products-comparison-warning" role="status">
               Some store offers could not be verified just now. The listings are shown, but please confirm the final price on the retailer's website.
             </p>
