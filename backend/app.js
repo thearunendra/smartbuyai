@@ -1639,6 +1639,53 @@ app.post("/api/search", requireDB, optionalAuth, requireAuth, searchLimiter, asy
 // BROWSE PRODUCTS (LIVE LISTINGS, NO AI PICKS)
 // =====================================================
 
+// Keep the expensive Gemini curation and per-product store lookups out of
+// the first catalogue response. Visitors receive Google Shopping listings
+// immediately, then the page refreshes itself while richer comparisons run.
+const productPageRefreshes = new Map();
+
+function startProductPageRefresh({ pageKey, category, query, listings, checkedAt }) {
+  if (productPageRefreshes.has(pageKey)) return;
+
+  const refresh = (async () => {
+    try {
+      const curated = await filterListings(category, listings);
+      const { products, complete } = await compareProducts(curated);
+      const payload = {
+        category,
+        query,
+        count: products.length,
+        checkedAt,
+        comparisonComplete: complete,
+        comparisonStatus: complete ? "complete" : "partial",
+        products
+      };
+
+      // Cache complete comparisons for the normal listing TTL. Partial
+      // comparisons use a short TTL so a later visit can retry missing offers.
+      await setCached(pageKey, payload, {
+        ttlSeconds: complete ? undefined : 60
+      });
+    } catch (error) {
+      console.warn("Background product comparison failed:", error.message);
+      const fallback = listings.slice(0, PRODUCTS_PER_PAGE);
+      await setCached(pageKey, {
+        category,
+        query,
+        count: fallback.length,
+        checkedAt,
+        comparisonComplete: false,
+        comparisonStatus: "partial",
+        products: fallback
+      }, { ttlSeconds: 60 });
+    } finally {
+      productPageRefreshes.delete(pageKey);
+    }
+  })();
+
+  productPageRefreshes.set(pageKey, refresh);
+}
+
 app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
   const category =
     typeof req.query.category === "string" &&
@@ -1660,29 +1707,48 @@ app.get("/api/products", optionalAuth, searchLimiter, async (req, res) => {
   }
 
   try {
+    // This is the only blocking external request on a cold product page.
     const listings = await searchShopping(query);
-    const { products, complete } = await compareProducts(
-      await filterListings(search || category, listings)
-    );
+    if (listings.length === 0) {
+      return res.json({
+        category,
+        query,
+        count: 0,
+        checkedAt: new Date().toISOString(),
+        comparisonComplete: true,
+        comparisonStatus: "complete",
+        products: []
+      });
+    }
 
-    const payload = {
+    const checkedAt = new Date().toISOString();
+    const products = listings.slice(0, PRODUCTS_PER_PAGE);
+    const fastPayload = {
       category,
       query,
       count: products.length,
-      checkedAt: new Date().toISOString(),
-      comparisonComplete: complete,
+      checkedAt,
+      comparisonComplete: false,
+      comparisonStatus: "pending",
       products
     };
 
-    if (complete) {
-      await setCached(pageKey, payload);
-    }
+    // Respond first. Ranking, model curation and store offer extraction
+    // continue in the background; subsequent page requests receive the
+    // enriched cached response as soon as it is ready.
+    startProductPageRefresh({
+      pageKey,
+      category: search || category,
+      query,
+      listings,
+      checkedAt
+    });
 
-    res.json(payload);
+    return res.json(fastPayload);
   } catch (error) {
     console.log("Serper Error:", error.message);
 
-    res.status(502).json({
+    return res.status(502).json({
       message: "Unable to fetch live products right now.",
       count: 0,
       products: []
