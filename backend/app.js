@@ -1025,6 +1025,83 @@ function mentionsModel(page, codes) {
   return codes.some((code) => text.includes(code));
 }
 
+const OFFER_MATCH_STOP_WORDS = new Set([
+  "the", "and", "with", "for", "from", "online", "buy", "price",
+  "india", "store", "official", "new", "best", "offer", "offers",
+  "sale", "in", "on", "at", "of", "to", "by", "product"
+]);
+
+function exactMerchantPageMatch(productName, page) {
+  const codes = modelCodes(productName);
+  if (codes.length > 0) return mentionsModel(page, codes);
+
+  const productTokens = [...new Set(nameTokens(productName).filter(
+    (token) => !OFFER_MATCH_STOP_WORDS.has(token) &&
+      (token.length >= 2 || /^\\d$/.test(token))
+  ))];
+
+  if (productTokens.length < 3) return false;
+
+  let pageTokens = [];
+  try {
+    const url = new URL(page.url);
+    pageTokens = nameTokens(`${page.title} ${url.pathname}`);
+  } catch {
+    pageTokens = nameTokens(page.title || "");
+  }
+
+  const available = new Set(pageTokens);
+  const matched = productTokens.filter((token) => available.has(token));
+  const brandToken = productTokens[0];
+  const coverage = matched.length / productTokens.length;
+  const numberTokens = productTokens.filter((token) => /\\d/.test(token));
+  const numberMatches = numberTokens.filter((token) => available.has(token)).length;
+
+  // Conservative fallback: merchant title/path must identify the brand and
+  // at least 75% of the requested model tokens. Do not trust snippet-only
+  // matches because snippets can mention competing products.
+  return (
+    available.has(brandToken) &&
+    coverage >= 0.75 &&
+    (numberTokens.length === 0 || numberMatches / numberTokens.length >= 0.6)
+  );
+}
+
+function priceFromMerchantSnippet(snippet) {
+  const matches = [...String(snippet || "").matchAll(
+    /(?:₹|\\bINR\\b|\\bRs\\.?\\s*)\\s*([0-9][0-9,]*(?:\\.\\d{1,2})?)/gi
+  )];
+  const amounts = [...new Set(matches.map((match) => parsePrice(match[1])).filter(Boolean))];
+
+  // If a snippet contains multiple currency amounts (EMI + offer, range, etc.)
+  // it is safer to show "See price" than guess which amount is the selling price.
+  return amounts.length === 1 ? amounts[0] : null;
+}
+
+function fallbackOffersFromMerchantPages(item) {
+  const seenStores = new Set();
+  const offers = [];
+
+  for (const page of item.pages) {
+    const store = trustedStoreFromUrl(page.url);
+    if (!store || !exactMerchantPageMatch(item.name, page)) continue;
+
+    const key = store.toLowerCase();
+    if (seenStores.has(key)) continue;
+    seenStores.add(key);
+
+    offers.push({
+      store,
+      price: priceFromMerchantSnippet(page.snippet),
+      link: page.url
+    });
+
+    if (offers.length >= 5) break;
+  }
+
+  return offers;
+}
+
 // Gemini reads search results, but merchant identity, URL and price shape are
 // validated deterministically before an offer can appear as a Buy link.
 async function extractOffersBatch(items) {
@@ -1053,8 +1130,11 @@ async function extractOffersBatch(items) {
     return result;
   }
 
-  const response = await generate({
-    contents: `
+  let aiData;
+
+  try {
+    const response = await generate({
+      contents: `
 For each product below you get Google search results (India).
 Find the pages where that exact product can be bought.
 
@@ -1076,40 +1156,56 @@ Rules:
 5. "store" is the store's display name, e.g. "Amazon", "Croma".
 6. "page" is the result's index. At most one page per store for each product.
 `,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "object",
-        properties: {
-          products: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                product: { type: "integer" },
-                offers: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      page: { type: "integer" },
-                      store: { type: "string" },
-                      price: { type: "integer" }
-                    },
-                    required: ["page", "store", "price"]
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            products: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  product: { type: "integer" },
+                  offers: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        page: { type: "integer" },
+                        store: { type: "string" },
+                        price: { type: "integer" }
+                      },
+                      required: ["page", "store", "price"]
+                    }
                   }
-                }
-              },
-              required: ["product", "offers"]
+                },
+                required: ["product", "offers"]
+              }
             }
-          }
-        },
-        required: ["products"]
+          },
+          required: ["products"]
+        }
       }
-    }
-  });
+    });
 
-  const aiData = JSON.parse(response.text || "{}");
+    aiData = JSON.parse(response.text || "{}");
+  } catch (error) {
+    console.warn(
+      "Gemini offer extraction unavailable; using strict trusted-store fallback:",
+      error.message
+    );
+
+    // Keep the catalogue usable when Gemini is busy. Only direct trusted
+    // retailers with a high-confidence exact product title/path match are
+    // shown; a price is included only when the snippet has one unambiguous
+    // currency-marked amount.
+    prepared.forEach((item, index) => {
+      result[index] = fallbackOffersFromMerchantPages(item);
+    });
+
+    return result;
+  }
   const done = new Set();
 
   for (const entry of aiData.products || []) {
@@ -2605,6 +2701,9 @@ module.exports = {
     findStorePages,
     modelCodes,
     mentionsModel,
+    exactMerchantPageMatch,
+    priceFromMerchantSnippet,
+    fallbackOffersFromMerchantPages,
     trustedStoreFromUrl,
     extractOffersBatch,
     mergeOffers,
