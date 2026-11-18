@@ -37,7 +37,8 @@ function mockApi() {
       if (searchReply instanceof Error) throw searchReply
       const reply = typeof searchReply === 'function' ? searchReply(options.body) : searchReply
       if (path === '/api/search/guest') {
-        const { conversationId, ...guestReply } = reply
+        const guestReply = { ...reply }
+        delete guestReply.conversationId
         return guestReply
       }
       return reply
