@@ -577,3 +577,75 @@
   font-size: 12px;
   line-height: 1.55;
 }
+
+
+/* Dark-mode contrast for filters, compare dock and comparison table. */
+:root[data-theme="dark"] .filter-toggle,
+:root[data-theme="dark"] .product-filters,
+:root[data-theme="dark"] .compare-dock,
+:root[data-theme="dark"] .compare-panel {
+  border-color: #36536D;
+  background: #182B40;
+  color: #F4F8FC;
+}
+
+:root[data-theme="dark"] .filter-toggle.active,
+:root[data-theme="dark"] .filter-toggle:hover {
+  border-color: #38BDF8;
+  background: rgba(56, 189, 248, 0.14);
+}
+
+:root[data-theme="dark"] .filter-heading strong,
+:root[data-theme="dark"] .compare-dock-copy strong,
+:root[data-theme="dark"] .compare-panel-heading h2,
+:root[data-theme="dark"] .compare-table thead th {
+  color: #F4F8FC;
+}
+
+:root[data-theme="dark"] .filter-heading span,
+:root[data-theme="dark"] .filter-fields label,
+:root[data-theme="dark"] .filter-results-count,
+:root[data-theme="dark"] .compare-dock-copy span,
+:root[data-theme="dark"] .compare-panel-heading p,
+:root[data-theme="dark"] .compare-footnote,
+:root[data-theme="dark"] .prices-checked-at {
+  color: #B9C8D6;
+}
+
+:root[data-theme="dark"] .filter-fields select,
+:root[data-theme="dark"] .filter-fields input {
+  border-color: #48647E;
+  background: #1D354D;
+  color: #F4F8FC;
+}
+
+:root[data-theme="dark"] .compare-table th,
+:root[data-theme="dark"] .compare-table td {
+  border-bottom-color: #36536D;
+  color: #C8D6E4;
+}
+
+:root[data-theme="dark"] .compare-table thead th {
+  background: #203A53;
+}
+
+:root[data-theme="dark"] .compare-table tbody th {
+  color: #B9C8D6;
+}
+
+:root[data-theme="dark"] .compare-table td a,
+:root[data-theme="dark"] .filter-heading button {
+  color: #7DD3FC;
+}
+
+:root[data-theme="dark"] .products-comparison-pending {
+  border-color: #36536D;
+  background: rgba(56, 189, 248, 0.12);
+  color: #BAE6FD;
+}
+
+:root[data-theme="dark"] .products-comparison-warning {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.10);
+  color: #FDE68A;
+}
