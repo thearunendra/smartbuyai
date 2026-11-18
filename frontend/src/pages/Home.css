@@ -267,7 +267,7 @@
   inset: -1px;
   z-index: -1;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(20, 38, 61, 0.34), transparent 42%, rgba(183, 154, 108, 0.24));
+  background: linear-gradient(135deg, rgba(20, 38, 61, 0.34), transparent 42%, rgba(56, 189, 248, 0.18));
   opacity: 0.5;
 }
 
@@ -1304,7 +1304,7 @@
 }
 
 @keyframes hero-voice-pulse {
-  50% { box-shadow: 0 0 0 6px rgba(183, 154, 108, 0.13); }
+  50% { box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.13); }
 }
 
 .hero-voice-feedback {
@@ -1323,7 +1323,7 @@
 }
 
 .decision-hub::before {
-  background: linear-gradient(145deg, rgba(20, 38, 61, 0.22), transparent 44%, rgba(183, 154, 108, 0.24));
+  background: linear-gradient(145deg, rgba(20, 38, 61, 0.22), transparent 44%, rgba(56, 189, 248, 0.18));
   opacity: 0.78;
 }
 
