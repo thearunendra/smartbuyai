@@ -99,8 +99,11 @@
 
   --primary: #7DD3FC;
   --primary-hover: #BAE6FD;
-  --primary-soft: rgba(56, 189, 248, 0.14);
+  --primary-soft: rgba(56, 189, 248, 0.16);
   --primary-text: #14263D;
+  --accent: #7DD3FC;
+  --accent-soft: rgba(56, 189, 248, 0.16);
+  --text-subtle: #9FB2C4;
 
   --success: #4ade80;
   --success-soft: rgba(74, 222, 128, 0.1);
