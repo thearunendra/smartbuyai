@@ -114,7 +114,9 @@ function Products() {
           products: [],
           checkedAt: null,
           comparisonComplete: false,
-          error: error.message || "Unable to connect to SmartBuy AI."
+          error: error.status || error.name === "TimeoutError"
+            ? error.message
+            : "Unable to connect to SmartBuy AI."
         });
       });
 
