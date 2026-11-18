@@ -91,14 +91,16 @@ function Products() {
 
   useEffect(() => {
     let ignore = false;
-    let refreshTimer;
     const controller = new AbortController();
 
     const loadProducts = async () => {
       try {
+        // The API returns only after all visible product cards have their
+        // store-offer rows. The comparison-style skeleton remains in place
+        // until one complete catalogue response is ready.
         const data = await api(`/api/products?${requestKey}`, {
           signal: controller.signal,
-          timeoutMs: 45_000
+          timeoutMs: 90_000
         });
 
         if (ignore) return;
@@ -111,12 +113,6 @@ function Products() {
           comparisonStatus: data.comparisonStatus || "complete",
           error: data.products?.length ? "" : data.message || ""
         });
-
-        // Fast listings are already on screen. Poll quietly for richer
-        // cross-store offers instead of keeping the entire grid skeletonized.
-        if (data.comparisonStatus === "pending") {
-          refreshTimer = setTimeout(loadProducts, 7000);
-        }
       } catch (error) {
         if (ignore || controller.signal.aborted) return;
         console.warn("Unable to load products:", error);
@@ -138,7 +134,6 @@ function Products() {
 
     return () => {
       ignore = true;
-      clearTimeout(refreshTimer);
       controller.abort();
     };
   }, [requestKey]);
@@ -332,7 +327,7 @@ function Products() {
             <div className="products-count-block">
               <p className="products-count">
                 {loading
-                  ? "Fetching live product listings..."
+                  ? "Finding products and comparing store prices..."
                   : activeFilterCount
                     ? `Showing ${filteredProducts.length} of ${sortedProducts.length} live listings in ${category}`
                     : `Showing ${filteredProducts.length} live listings in ${category}`}
